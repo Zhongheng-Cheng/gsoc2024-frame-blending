@@ -1,6 +1,9 @@
 # MacOS system files
 .DS_Store
 
+# Llama model folder
+llama/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
