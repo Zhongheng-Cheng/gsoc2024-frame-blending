@@ -1,16 +1,30 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+import transformers
 
-# Load the model and tokenizer
-model_name = "NousResearch/Llama-2-7b-chat-hf"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
+from transformers import LlamaForCausalLM, LlamaTokenizer
 
-# Tokenize input
-input_text = "Hello, how are you?"
-inputs = tokenizer(input_text, return_tensors="pt")
+model_dir = "./llama/llama-2-7b-chat-hf"
+model = LlamaForCausalLM.from_pretrained(model_dir)
+tokenizer = LlamaTokenizer.from_pretrained(model_dir)
 
-# Generate response
-output = model.generate(**inputs, max_length=100)
-response = tokenizer.decode(output[0], skip_special_tokens=True)
+pipeline = transformers.pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    torch_dtype=torch.float16,
+    device_map="auto",
+)
 
-print(response)
+sequences = pipeline(
+    'I have tomatoes, basil and cheese at home. What can I cook for dinner?\n',
+    do_sample=True,
+    top_k=10,
+    num_return_sequences=1,
+    eos_token_id=tokenizer.eos_token_id,
+    max_length=400,
+)
+
+print(sequences)
+
+for seq in sequences:
+    print(f"{seq['generated_text']}")
