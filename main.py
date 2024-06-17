@@ -15,16 +15,21 @@ pipeline = transformers.pipeline(
     device_map="auto",
 )
 
-sequences = pipeline(
-    'I have tomatoes, basil and cheese at home. What can I cook for dinner?\n',
-    do_sample=True,
-    top_k=10,
-    num_return_sequences=1,
-    eos_token_id=tokenizer.eos_token_id,
-    max_length=400,
-)
+def generate_result(prompt):
+    sequences = pipeline(
+        prompt,
+        do_sample=True,
+        top_k=10,
+        num_return_sequences=1,
+        eos_token_id=tokenizer.eos_token_id,
+        max_length=400,
+    )
+    return sequences
 
-print(sequences)
+while True:
+    prompt = input(">>> Prompt: ")
+    sequences = generate_result(prompt + "\n")
+    print(sequences)
 
-for seq in sequences:
-    print(f"{seq['generated_text']}")
+    for seq in sequences:
+        print(f"{seq['generated_text']}")
