@@ -8,9 +8,13 @@ file_extractor = {".xml": parser}
 documents = SimpleDirectoryReader(
     data_path, file_extractor=file_extractor
 ).load_data()
+print("Finished loading data")
 
 index = VectorStoreIndex.from_documents(documents)
 
 query_engine = index.as_query_engine()
-response = query_engine.query("What are the FEs of the frame 'Used_up'?")
+prompt = "In the FrameNet dataset, what are the FEs for the frame Execute_plan?"
+response = query_engine.query(prompt)
+print(f">>> Prompt: {prompt}")
+print("Response:")
 print(response)
