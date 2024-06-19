@@ -1,3 +1,4 @@
 transformers==4.38
 accelerate
 sentencepiece
+llama-index
