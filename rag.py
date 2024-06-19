@@ -12,5 +12,5 @@ documents = SimpleDirectoryReader(
 index = VectorStoreIndex.from_documents(documents)
 
 query_engine = index.as_query_engine()
-response = query_engine.query("What are the FEs of the frame 'Used_up'?")
+response = query_engine.query("In the FrameNet dataset, what are the FEs for the frame Execute_plan?")
 print(response)
