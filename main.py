@@ -2,6 +2,7 @@ import torch
 import transformers
 
 from transformers import LlamaForCausalLM, LlamaTokenizer
+import time
 
 def generate_result(prompt):
     sequences = pipeline(
@@ -22,9 +23,11 @@ def keep_asking():
             print(f"{seq['generated_text']}")
 
 def ask_once(prompt):
+    start_time = time.time()
     sequences = generate_result(prompt + "\n")
     for seq in sequences:
         print(f"{seq['generated_text']}")
+    print(f"Result generating finished, elapsed time: {time.time() - start_time:.2f}s")
 
 if __name__ == "__main__":
     model_dir = "./llama/llama-2-7b-chat-hf"
@@ -39,8 +42,7 @@ if __name__ == "__main__":
         device_map="auto",
     )
 
-    prompt = '''
-    Here is an example of frame blending: 
+    prompt = '''Here is an example of frame blending: 
     Expression: "Time is money."
     Frames Involved:
     Time Frame: This involves concepts related to the passage of time, such as hours, minutes, schedules, deadlines, etc.
@@ -55,7 +57,5 @@ if __name__ == "__main__":
     In the blended space, time is conceptualized as a valuable commodity that can be budgeted, spent wisely, or wasted, similar to how money is managed.
     Emergent Structure:
     This blend creates a new understanding where activities are seen through the lens of financial transactions. For example, "wasting time" implies a loss similar to wasting money, highlighting the value and scarcity of time.
-
-    Give me two more examples of frame blending based on the example I gave you.
-    '''
+    Give me another example of frame blending based on the example I gave you.'''
     ask_once(prompt)
