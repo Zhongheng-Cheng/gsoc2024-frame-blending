@@ -1,6 +1,9 @@
 # MacOS system files
 .DS_Store
 
+# FrameNet data folder
+frame/
+
 # Llama model folder
 llama/
 
