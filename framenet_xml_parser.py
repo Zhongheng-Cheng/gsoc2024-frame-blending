@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import re
 import json
 import os
+from tqdm import tqdm
 
 def get_fr_name(name):
     with open(name, 'r') as f:
@@ -171,19 +172,22 @@ def xml_parser(name):
     
     return out
 
-def xml_to_json(input_path, output_folder):
-    name_xml=input_path.split("/")[-1][:-4]
-    with open(f'{output_folder}/{name_xml}.json', 'w') as fo:
+def xml_to_json(input_path, output_path):
+    with open(output_path, 'w') as fo:
         json.dump(xml_parser(input_path), fo, indent=4)
-        print(f"Successfuly parsed and saved as {name_xml}.json")
+    return
 
 
 if __name__=="__main__":
-    new_folder_name = "frame_json_tmp"
-    if not os.path.exists(new_folder_name):
-        os.makedirs(new_folder_name)
-    file_names = os.listdir("frame")
+    xml_folder_name = "frame"
+    json_folder_name = "frame_json_tmp"
+    if not os.path.exists(json_folder_name):
+        os.makedirs(json_folder_name)
+    file_names = [file for file in os.listdir(xml_folder_name) if file[-4:] == ".xml"]
+    progress_bar = tqdm(total=len(file_names), desc="Parsing")
     for file in file_names:
-        if file[-4:] == ".xml":
-            xml_to_json(f"frame/{file}", new_folder_name)
+        xml_to_json(f"{xml_folder_name}/{file}", f"{json_folder_name}/{file.replace(".xml", ".json")}")
+        progress_bar.update(1)
+    progress_bar.close()
+    print("Finished")
 
