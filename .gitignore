@@ -3,6 +3,8 @@
 
 # FrameNet data folder
 frame/
+frame_json/
+frame_tmp/
 
 # Llama model folder
 llama/
