@@ -3,20 +3,22 @@ import sys
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
+from dotenv import load_dotenv
+load_dotenv()
 from os import getenv
 from huggingface_hub import login 
 login(token=getenv("HUGGINGFACE_API_KEY"))
 
-from models import llama2_ollama, embed_model
+from models import llama2_llamaindex, embed_model
 from llama_index.core import Settings, SimpleDirectoryReader, VectorStoreIndex
-from llama_index.readers.file import XMLReader
+from llama_index.readers.json import JSONReader
 
-# Settings.llm = llama2_ollama()
-# Settings.embed_model = embed_model()
+Settings.llm = llama2_llamaindex()
+Settings.embed_model = embed_model()
 
-parser = XMLReader()
-file_extractor = {".xml": parser}
-documents = SimpleDirectoryReader("frame_tmp/", file_extractor=file_extractor).load_data()
+parser = JSONReader()
+file_extractor = {".json": parser}
+documents = SimpleDirectoryReader("frame_json/", file_extractor=file_extractor).load_data()
 print("Finished loading data")
 
 index = VectorStoreIndex.from_documents(documents)
@@ -53,7 +55,11 @@ along with the analysis process similar to the example I provide you.
 '''
 
 prompt_definition = f'''Please read the provided FrameNet data, 
-then answer this question: what is the definition of the frame 'Execute_plan'?
+then answer this question: what is the definition of the frame 'Abusing'?
+'''
+
+prompt_fe = f'''Please read the provided FrameNet data, 
+then answer this question: what are the frame elements of the frame 'Abusing'?
 '''
 
 prompt_describe = f'''Please read the frame 'Execute_plan' in the provided FrameNet data,
@@ -71,5 +77,5 @@ Provide an analysis according to the sentence that you generated.
 {one_shot_example}
 '''
 
-response = query_engine.query(prompt_fb_3frames_oneshot)
+response = query_engine.query(prompt_describe)
 print(response)
