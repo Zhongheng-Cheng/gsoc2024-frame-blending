@@ -93,17 +93,6 @@ for frame in frames:
     inherits_from = data_dict.get("fr_rel").get("Inherits from")
     fathers = [father.strip() for father in inherits_from.split(', ')] if inherits_from else []
 
-# 不在tree中：
-#     先看有没有father，如果没有：直接append root
-#     再看有没有找到father，如果没有找到：append root with father
-#         如果找到：append subnode
-# 在tree中（一定是root）：
-#     没有father：保持原样
-#     有father：找father
-#         找到：接到father后，删root
-#         没找到：append root with father，删root
-        
-
     # insert node into trees
     if not fathers and not is_node_existing:
         tree.append_root(node)
