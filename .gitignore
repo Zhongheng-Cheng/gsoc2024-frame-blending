@@ -1,3 +1,5 @@
+tmp_*
+
 # MacOS system files
 .DS_Store
 

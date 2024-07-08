@@ -17,11 +17,19 @@ class FrameNode(object):
     
     def _sorted_inherit(self):
         return [item[1] for item in sorted(self.inherited_by.items())]
-
-    def _str_helper(self, level=-1, prefix=""):
-        result = "    " * level + prefix + self.name
-        for node in self._sorted_inherit():
-            result += '\n' + node._str_helper(level=level+1, prefix="|-- ")
+    
+    def _str_helper(self, is_head=True, prefix="", is_tail=False):
+        """Print the tree structure of the linked list."""
+        if is_head:
+            result = self.name + '\n'
+        else:
+            result = prefix + ("└── " if is_tail else "├── ") + self.name + '\n'
+        for i, node in enumerate(self._sorted_inherit()):
+            if is_head:
+                new_prefix = prefix
+            else:
+                new_prefix = prefix + ("    " if is_tail else "│   ")
+            result += node._str_helper(False, new_prefix, i == len(self.inherited_by) - 1)
         return result
     
     def find_node(self, node_name):
@@ -44,11 +52,6 @@ class FrameNode(object):
         return len(self.inherited_by.keys())
     
 class RootFrameNode(FrameNode):
-    def __str__(self):
-        result = ""
-        for node in self._sorted_inherit():
-            result += str(node) + '\n\n'
-        return result
 
     def append_root(self, node, fathers=[]):
         if not fathers:
