@@ -42,7 +42,7 @@ class FrameNode(object):
         return None
     
     def delete(self, node_name):
-        self.inhertied_by = {key:val for key, val in self.inherited_by.items() if key != node_name}
+        self.inherited_by = {key:val for key, val in self.inherited_by.items() if key != node_name}
         return
     
     def count_nodes(self):
@@ -97,4 +97,4 @@ for frame in frames:
 
 with open("tmp_result.txt", 'w') as fo:
     fo.write(str(root))
-print(root.find_node("State"))
+# print(root.find_node("State"))
