@@ -14,10 +14,13 @@ class FrameNode(object):
     
     def __str__(self):
         return self._str_helper()
+    
+    def _sorted_inherit(self):
+        return [item[1] for item in sorted(self.inherited_by.items())]
 
     def _str_helper(self, level=-1, prefix=""):
         result = "    " * level + prefix + self.name
-        for node in self.inherited_by.values():
+        for node in self._sorted_inherit():
             result += '\n' + node._str_helper(level=level+1, prefix="|-- ")
         return result
     
@@ -30,54 +33,37 @@ class FrameNode(object):
                 return result
         return None
     
-    def count_nodes(self):
-        return 1 + sum([subnode.count_nodes() for subnode in self.inherited_by.values()])
-
-
-class FrameTree():
-    def __init__(self):
-        self.roots = []
+    def delete(self, node_name):
+        self.inhertied_by = {key:val for key, val in self.inherited_by.items() if key != node_name}
         return
     
+    def count_nodes(self):
+        return 1 + sum([subnode.count_nodes() for subnode in self.inherited_by.values()])
+    
+    def count_inheritage(self):
+        return len(self.inherited_by.keys())
+    
+class RootFrameNode(FrameNode):
     def __str__(self):
         result = ""
-        for root in self.roots:
-            result += str(root) + '\n\n'
+        for node in self._sorted_inherit():
+            result += str(node) + '\n\n'
         return result
-    
-    def find_root(self, node_name):
-        for root in self.roots:
-            if root.name == node_name:
-                return root
-        return None
-    
-    def find_node(self, node_name):
-        for root in self.roots:
-            result = root.find_node(node_name)
-            if result:
-                return result
-        return None
-    
-    def append_root(self, root_node, fathers=[]):
+
+    def append_root(self, node, fathers=[]):
         if not fathers:
-            self.roots.append(root_node)
+            self.inherited_by[node.name] = node
         else:
             for father in fathers:
                 father_node = FrameNode(name=father)
-                father_node.inherited_by[root_node.name] = root_node
-                self.roots.append(father_node)
-            if root_node in self.roots:
-                self.roots.remove(root_node)
+                father_node.inherited_by[node.name] = node
+                self.inherited_by[father_node.name] = father_node
+            if node in self.inherited_by.values():
+                self.delete(node.name)
         return
     
-    def count_roots(self):
-        return len(self.roots)
-    
-    def count_nodes(self):
-        return sum([root_node.count_nodes() for root_node in self.roots])
-    
 
-tree = FrameTree()
+root = RootFrameNode("[root]")
 for frame in frames:
     is_node_existing = False
     
@@ -85,8 +71,8 @@ for frame in frames:
     with open(f"frame_json/{frame}.json", 'r') as fo:
         data_dict = json.load(fo)
     frame_name = data_dict.get("frame_name").strip()
-    node = tree.find_root(frame_name)
-    if node:
+    if frame_name in root.inherited_by.keys():
+        node = root.inherited_by[frame_name]
         is_node_existing = True
     else:
         node = FrameNode(data_dict.get("frame_name").strip())
@@ -95,15 +81,17 @@ for frame in frames:
 
     # insert node into trees
     if not fathers and not is_node_existing:
-        tree.append_root(node)
+        root.append_root(node)
     elif fathers:
         for father in fathers:
-            father_node = tree.find_node(father)
+            father_node = root.find_node(father)
             if father_node:
                 father_node.inherited_by[node.name] = node
-                if node in tree.roots:
-                    tree.roots.remove(node)
+                if node in root.inherited_by.values():
+                    root.delete(node.name)
             else:
-                tree.append_root(node, [father])
+                root.append_root(node, [father])
 
-print(tree)
+with open("tmp_result.txt", 'w') as fo:
+    fo.write(str(root))
+print(root.find_node("State"))
