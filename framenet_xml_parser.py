@@ -10,7 +10,7 @@ def get_fr_name(name):
     Bs_data = BeautifulSoup(data, "xml")
     frame_name=Bs_data.find('frame').get('name')
     if len(frame_name)!=0:
-        frame_name=frame_name.replace("-"," ").replace("_"," ").strip()
+        frame_name=frame_name.strip()
         return frame_name
     else:
         return "no frame name"
@@ -118,7 +118,7 @@ def get_fr_rel(name):
                 _,_,fr_type=whole_tag(str(i),"frameRelation","type=")
                 fr_type=fr_type.replace("-"," ").replace("_"," ").strip()
                 relation=", ".join(re.compile(r'<[^>]+>').sub('', str(j)).strip() for j in i.find_all('relatedFrame'))
-                relation=relation.replace("-"," ").replace("_"," ").strip()
+                relation=relation.strip()
                 yield fr_type,relation
     else:
         return "no related frame type","no related frame name"
