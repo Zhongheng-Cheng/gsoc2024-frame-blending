@@ -125,7 +125,7 @@ def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=Fal
     :return: Root node of the constructed hierarchy.
     """
     assert frame_relation in frame_relations, f"Please enter one of the relations: {", ".join(frame_relations.keys())}"
-    root = RootFrameNode(f"[{frame_relation}]")
+    root = RootFrameNode(f"[{frame_relations[frame_relation][1 if not reverse_order else 0]}]")
     for frame in frames:
         is_node_existing = False
         
@@ -167,8 +167,13 @@ def save_hierarchy_to_file(root, filename):
 
 if __name__ == "__main__":
     import os
+    from hierarchy_examining import check_hierarchy
     frame_folder = "frame"
     frames = [file[:-4] for file in os.listdir(frame_folder) if file[-4:] == ".xml"]
-    frame_relation = "Inheritance"
-    root = analyze_hierarchy(frames, frame_relation)
-    save_hierarchy_to_file(root, "tmp_result.txt")
+    for frame_relation in frame_relations.keys():
+        root = analyze_hierarchy(frames, frame_relation)
+        if check_hierarchy(root, frame_relation):
+            save_hierarchy_to_file(root, f"tmp_result_{frame_relation}.txt")
+        else:
+            print("[Error] Hierarchy check failed!")
+        # save_hierarchy_to_file(root, f"tmp_result_{frame_relation}.txt")

@@ -12,7 +12,7 @@ def check_node(node, father_node, frame_relation, reverse_order=False):
     children = [child.strip() for child in children.split(', ')] if children else []
     fathers = data_dict.get("fr_rel").get(frame_relations[frame_relation][0 if not reverse_order else 1])
     fathers = [father.strip() for father in fathers.split(', ')] if fathers else []
-    if father_node.name == f"[{frame_relation}]" and fathers == [] or father_node.name in fathers:
+    if father_node.name == f"[{frame_relations[frame_relation][1 if not reverse_order else 0]}]" and fathers == [] or father_node.name in fathers:
         if sorted(node.next.keys()) == sorted(children):
             return 1, 
     return 0
