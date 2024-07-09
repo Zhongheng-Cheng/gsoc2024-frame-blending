@@ -117,6 +117,7 @@ def analyze_hierarchy(frames):
 def save_hierarchy_to_file(root, filename):
     with open(filename, 'w') as fo:
         fo.write(str(root))
+    print(f"Hierarchy has been saved to {filename}!")
 
 if __name__ == "__main__":
     import os
