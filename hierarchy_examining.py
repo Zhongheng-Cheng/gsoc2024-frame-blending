@@ -1,46 +1,42 @@
-from framenet_hierarchy import analyze_hierarchy
+from framenet_hierarchy import analyze_hierarchy, frame_relations
 import os
 import json
 
-frame_folder = "frame"
-frames = [file[:-4] for file in os.listdir(frame_folder) if file[-4:] == ".xml"]
-root = analyze_hierarchy(frames)
-count = 0
-
-def check_node(node, father_node):
+def check_node(node, father_node, frame_relation, reverse_order=False):
     """
-    Checks if a node has correct "Inherited from" and "Is Inherited by" relations.
+    Checks if a node has correct father and child relations.
     """
-    global count
-    count += 1
     with open(f"frame_json/{node.name}.json", 'r') as fo:
         data_dict = json.load(fo)
-    is_inherited_by = data_dict.get("fr_rel").get("Is Inherited by")
-    children = [father.strip() for father in is_inherited_by.split(', ')] if is_inherited_by else []
-    inherits_from = data_dict.get("fr_rel").get("Inherits from")
-    fathers = [father.strip() for father in inherits_from.split(', ')] if inherits_from else []
-    if father_node.name == "[root]" and fathers == [] or father_node.name in fathers:
-        if sorted(node.inherited_by.keys()) == sorted(children):
-            return 1
+    children = data_dict.get("fr_rel").get(frame_relations[frame_relation][1 if not reverse_order else 0])
+    children = [child.strip() for child in children.split(', ')] if children else []
+    fathers = data_dict.get("fr_rel").get(frame_relations[frame_relation][0 if not reverse_order else 1])
+    fathers = [father.strip() for father in fathers.split(', ')] if fathers else []
+    if father_node.name == f"[{frame_relation}]" and fathers == [] or father_node.name in fathers:
+        if sorted(node.next.keys()) == sorted(children):
+            return 1, 
     return 0
 
 
-def check_hierarchy(node):
+def check_hierarchy(node, frame_relation, reverse_order=False):
     """
     Recursively check all the son nodes.
     """
-    result = 1
-    if node.inherited_by == {}:
-        return 1
-    for son_node in node.inherited_by.values():
-        if check_node(son_node, node) and check_hierarchy(son_node):
-            result = 1
-        else:
-            result = 0
-    return result
+    if node.next == {}:
+        return True
+    for son_node in node.next.values():
+        if not check_node(son_node, node, frame_relation, reverse_order) \
+            or not check_hierarchy(son_node, frame_relation, reverse_order):
+            return False
+    return True
 
 
-if check_hierarchy(root):
-    print(f"Successfully passed {count}/{root.count_nodes() - 1} nodes!") # all the nodes except root node
-else:
-    print("Failed!")
+if __name__ == "__main__":
+    frame_folder = "frame"
+    frames = [file[:-4] for file in os.listdir(frame_folder) if file[-4:] == ".xml"]
+    frame_relation = "Inheritance"
+    root = analyze_hierarchy(frames, frame_relation)
+    if check_hierarchy(root, frame_relation):
+        print(f"Successfully passed!")
+    else:
+        print("Failed!")
