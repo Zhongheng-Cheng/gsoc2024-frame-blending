@@ -1,13 +1,14 @@
 import json
 
 # A dictionary mapping frame relations to their verbal descriptors.
+# Currently do not contain "Precedes", "Is Preceded by", "Is Inchoative of", "Is Causative of".
+# "Precedes", "Is Preceded by": contain loops (e.g. Waking_up, Process_continue)
+# "Is Inchoative of", "Is Causative of": do not correspond one-to-one (e.g. Awareness & Coming_to_believe)
 frame_relations = {
     "Inheritance": ["Inherits from", "Is Inherited by"],
     "Perspective": ["Perspective on", "Is Perspectivized in"],
     "Usage": ["Uses", "Is Used by"],
     "Subframe": ["Subframe of", "Has Subframe(s)"],
-    "Precedes": ["Precedes", "Is Preceded by"],
-    "Causation": ["Is Inchoative of", "Is Causative of"]
 }
 
 class FrameNode(object):
@@ -120,11 +121,11 @@ def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=Fal
     Analyzes and builds the frame hierarchy based on the specified relation.
     :param frames: List of frame names to include in the hierarchy.
     :param frame_relation: The relation type to build the hierarchy.
-        Choose from: ["Inheritance", "Perspective", "Usage", "Subframe", "Precedes", "Causation"]
+        Choose from: ["Inheritance", "Perspective", "Usage", "Subframe"]
     :param reverse_order: Whether to reverse the order of the relation.
     :return: Root node of the constructed hierarchy.
     """
-    assert frame_relation in frame_relations, f"Please enter one of the relations: {", ".join(frame_relations.keys())}"
+    assert frame_relation in frame_relations, f"Please enter one of the relations: ['{"', '".join(frame_relations.keys())}']"
     root = RootFrameNode(f"[{frame_relations[frame_relation][1 if not reverse_order else 0]}]")
     for frame in frames:
         is_node_existing = False
