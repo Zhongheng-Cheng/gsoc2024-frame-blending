@@ -87,31 +87,31 @@ class FrameNode(object):
         """
         return 1 + sum([subnode.count_nodes() for subnode in self.next.values()])
     
-    def count_inheritage(self):
+    def children(self):
         """
-        Counts the number of immediate child nodes of this node.
-        :return: Number of child nodes.
+        Get the list of immediate child nodes of this node.
+        :return: List of child nodes.
         """
-        return len(self.next.keys())
+        return list(self.next.values())
     
 class RootFrameNode(FrameNode):
     """
     Specialized FrameNode that acts as the root of a frame hierarchy.
     """
 
-    def append_root(self, node: FrameNode, fathers: list=[]):
+    def append_root(self, node: FrameNode, parents: list=[]):
         """
-        Appends a node to the root or under specified father nodes.
+        Appends a node to the root or under specified parent nodes.
         :param node: FrameNode to append.
-        :param fathers: List of father node names under which the node will be appended.
+        :param parents: List of parent node names under which the node will be appended.
         """
-        if not fathers:
+        if not parents:
             self.next[node.name] = node
         else:
-            for father in fathers:
-                father_node = FrameNode(name=father)
-                father_node.next[node.name] = node
-                self.next[father_node.name] = father_node
+            for parent in parents:
+                parent_node = FrameNode(name=parent)
+                parent_node.next[node.name] = node
+                self.next[parent_node.name] = parent_node
             if node in self.next.values():
                 self.delete(node.name)
         return
@@ -125,12 +125,12 @@ def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=Fal
     :param reverse_order: Whether to reverse the order of the relation.
     :return: Root node of the constructed hierarchy.
     """
-    assert frame_relation in frame_relations, f"Please enter one of the relations: ['{"', '".join(frame_relations.keys())}']"
+    assert frame_relation in frame_relations, f'''Please enter one of the relations: ['{"', '".join(frame_relations.keys())}']'''
     root = RootFrameNode(f"[{frame_relations[frame_relation][1 if not reverse_order else 0]}]")
     for frame in frames:
         is_node_existing = False
         
-        # parse node name and fathers
+        # parse node name and parents
         with open(f"frame_json/{frame}.json", 'r') as fo:
             data_dict = json.load(fo)
         frame_name = data_dict.get("frame_name").strip()
@@ -139,21 +139,21 @@ def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=Fal
             is_node_existing = True
         else:
             node = FrameNode(data_dict.get("frame_name").strip())
-        fathers = data_dict.get("fr_rel").get(frame_relations[frame_relation][0 if not reverse_order else 1])
-        fathers = [father.strip() for father in fathers.split(', ')] if fathers else []
+        parents = data_dict.get("fr_rel").get(frame_relations[frame_relation][0 if not reverse_order else 1])
+        parents = [parent.strip() for parent in parents.split(', ')] if parents else []
 
         # insert node into trees
-        if not fathers and not is_node_existing:
+        if not parents and not is_node_existing:
             root.append_root(node)
-        elif fathers:
-            for father in fathers:
-                father_node = root.find(father)
-                if father_node:
-                    father_node.next[node.name] = node
+        elif parents:
+            for parent in parents:
+                parent_node = root.find(parent)
+                if parent_node:
+                    parent_node.next[node.name] = node
                     if node in root.next.values():
                         root.delete(node.name)
                 else:
-                    root.append_root(node, [father])
+                    root.append_root(node, [parent])
     return root
 
 def save_hierarchy_to_file(root, filename):
@@ -166,11 +166,8 @@ def save_hierarchy_to_file(root, filename):
         fo.write(str(root))
     print(f"Hierarchy has been saved to {filename}!")
 
-if __name__ == "__main__":
-    import os
+def analyze_all_relations(frames):
     from hierarchy_examining import check_hierarchy
-    frame_folder = "frame"
-    frames = [file[:-4] for file in os.listdir(frame_folder) if file[-4:] == ".xml"]
     for frame_relation in frame_relations.keys():
         root = analyze_hierarchy(frames, frame_relation)
         if check_hierarchy(root, frame_relation):
@@ -178,3 +175,23 @@ if __name__ == "__main__":
         else:
             print("[Error] Hierarchy check failed!")
         # save_hierarchy_to_file(root, f"tmp_result_{frame_relation}.txt")
+    return
+
+if __name__ == "__main__":
+
+    # Get hierarchy
+    import os
+    frame_folder = "frame"
+    frames = [file[:-4] for file in os.listdir(frame_folder) if file[-4:] == ".xml"]
+    frame_relation = "Inheritance"
+    root = analyze_hierarchy(frames, frame_relation)
+
+    # TEST
+    print(root.find("Event"))
+    # level1_nodes = root.children()
+    # level1_nodes.sort(key=lambda x: x.count_nodes(), reverse=True)
+    # for i in range(10):
+    #     print(level1_nodes[i].name)
+    
+
+    
