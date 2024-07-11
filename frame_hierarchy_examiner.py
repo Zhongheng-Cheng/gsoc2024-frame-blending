@@ -1,4 +1,4 @@
-from framenet_hierarchy import analyze_hierarchy, frame_relations
+from frame_hierarchy_analyzer import analyze_hierarchy, frame_relations
 import os
 import json
 

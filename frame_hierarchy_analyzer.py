@@ -167,7 +167,7 @@ def save_hierarchy_to_file(root, filename):
     print(f"Hierarchy has been saved to {filename}!")
 
 def analyze_all_relations(frames):
-    from hierarchy_examining import check_hierarchy
+    from frame_hierarchy_examiner import check_hierarchy
     for frame_relation in frame_relations.keys():
         root = analyze_hierarchy(frames, frame_relation)
         if check_hierarchy(root, frame_relation):
