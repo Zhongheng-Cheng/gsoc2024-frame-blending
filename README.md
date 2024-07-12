@@ -9,7 +9,7 @@ My personal progress blog can be found [here](https://zhongheng-cheng.github.io/
 ## Table of Contents
 
 - [Installation](#installation)
-- [Frame Hierarchy Analysis](#frame-hierarchy-analysis)
+- [Frame Hierarchy Analyzer](#frame-hierarchy-analyzer)
 - [FrameNet XML Parser](#framenet-xml-parser)
 - [RAG for Llama2 (Huggingface)](#rag-for-llama2-huggingface)
 - [Llama2 (Meta)](#llama2-meta)
@@ -41,7 +41,36 @@ touch .env
 # HUGGINGFACE_API_KEY="..."
 ```
 
-## Frame Hierarchy Analysis
+## Frame Hierarchy Analyzer
+
+### Introduction
+
+This section of the project focuses on analyzing linguistic frame hierarchies. It involves constructing a tree-like structure to represent frame relations, searching within this structure, and performing other relevant analyses.
+
+### Usage
+
+```python
+# Example of building a hierarchy
+frames = ['Event', 'Action', ...]
+frame_relation = 'Inheritance'
+reverse_order = False # False: In direction of "Is Inherited by"; True: In direction of "Inherits from"
+root = analyze_hierarchy(frames, frame_relation, reverse_order) # Returns the root node of the tree hierarchy
+
+# Finding a specific frame node
+node = root.find('Event')
+
+# Print the visualized hierarchy of any node with its subnodes
+print(node)
+
+# Counts the total number of nodes in the subtree including this node
+total_number = node.count()
+
+# Get the list of immediate child nodes of this node
+children = node.children()
+
+# Saving the hierarchy to a file
+save_hierarchy_to_file(root, 'output_hierarchy.txt')
+```
 
 ## FrameNet XML Parser
 
