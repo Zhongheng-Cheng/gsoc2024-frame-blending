@@ -93,6 +93,19 @@ parse(xml_folder_path, json_folder_path)
 
 ## RAG for Llama2 (Huggingface)
 
+### Introduction
+
+This code utilizes Llama2-7b-chat with Huggingface API, and achieves Retrieval Augmented Generation (RAG) leveraging Llama-index. Specifically, a JSON parser is used to read all the JSON-format FrameNet frame data, and create a query engine with vector store index for querying.
+
+### Usage
+
+```python
+from rag import query_engine
+
+prompt = "..."
+response = query_engine.query(prompt)
+```
+
 ## Llama2 (Meta)
 
 Referring to [Meta - 5 Steps to Getting Started with Llama 2](https://ai.meta.com/blog/5-steps-to-getting-started-with-llama-2/)
