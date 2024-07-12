@@ -50,6 +50,8 @@ This section of the project focuses on analyzing linguistic frame hierarchies. I
 ### Usage
 
 ```python
+from frame_hierarchy_analyzer import analyze_hierarchy, save_hierarchy_to_file
+
 # Example of building a hierarchy
 frames = ['Event', 'Action', ...]
 frame_relation = 'Inheritance'
@@ -73,6 +75,21 @@ save_hierarchy_to_file(root, 'output_hierarchy.txt')
 ```
 
 ## FrameNet XML Parser
+
+### Introduction
+
+This code transforms the original FrameNet data in XML format to JSON format, leaving out unimportant information for frame analysis, such as frame ID and created data. Mainly developed by [Rohan](https://medium.com/@rohank587/spending-the-summer-24-in-gsoc-with-red-hen-lab-5c8aade49026). Minor modifications are made to accommodate the FrameNet data input in JSON format for [Frame Hierarchy Analyzer](#frame-hierarchy-analyzer).
+
+### Usage
+
+```python
+from framenet_xml_parser import parse
+
+# Example of parsing a directory of .xml files
+xml_folder_path = "frame"
+json_folder_path = "frame_json"
+parse(xml_folder_path, json_folder_path)
+```
 
 ## RAG for Llama2 (Huggingface)
 
