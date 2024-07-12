@@ -177,17 +177,21 @@ def xml_to_json(input_path, output_path):
         json.dump(xml_parser(input_path), fo, indent=4)
     return
 
-
-if __name__=="__main__":
-    xml_folder_name = "frame"
-    json_folder_name = "frame_json"
-    if not os.path.exists(json_folder_name):
-        os.makedirs(json_folder_name)
-    file_names = [file for file in os.listdir(xml_folder_name) if file[-4:] == ".xml"]
+def parse(xml_folder_path, json_folder_path):
+    if not os.path.exists(json_folder_path):
+        os.makedirs(json_folder_path)
+    file_names = [file for file in os.listdir(xml_folder_path) if file[-4:] == ".xml"]
     progress_bar = tqdm(total=len(file_names), desc="Parsing")
     for file in file_names:
-        xml_to_json(f"{xml_folder_name}/{file}", f"{json_folder_name}/{file.replace('.xml', '.json')}")
+        xml_to_json(f"{xml_folder_path}/{file}", f"{json_folder_path}/{file.replace('.xml', '.json')}")
         progress_bar.update(1)
     progress_bar.close()
     print("Finished")
+    return
+
+
+if __name__=="__main__":
+    xml_folder_path = "frame"
+    json_folder_path = "frame_json"
+    parse(xml_folder_path, json_folder_path)
 
