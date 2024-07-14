@@ -40,13 +40,14 @@ def get_query_engine(save_index=True):
     return query_engine
 
 
-def generate_response(query_engine, prompt):
+def generate_response(query_engine, prompt, display=True):
     response = query_engine.query(prompt)
-    print(">>> prompt")
-    print(prompt)
-    print(">>> response")
-    print(response)
-    return
+    if display:
+        print(">>> prompt")
+        print(prompt)
+        print(">>> response")
+        print(response)
+    return response
 
 
 def multi_conversation(query_engine):
