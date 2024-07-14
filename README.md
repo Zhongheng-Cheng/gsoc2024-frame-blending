@@ -100,10 +100,11 @@ This code utilizes Llama2-7b-chat with Huggingface API, and achieves Retrieval A
 ### Usage
 
 ```python
-from rag import query_engine
+from rag import get_query_engine, generate_response
 
 prompt = "..."
-response = query_engine.query(prompt)
+query_engine = get_query_engine()
+response = generate_response(query_engine, prompt)
 ```
 
 ## Llama2 (Meta)
