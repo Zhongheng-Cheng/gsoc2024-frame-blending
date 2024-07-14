@@ -97,6 +97,8 @@ parse(xml_folder_path, json_folder_path)
 
 This code utilizes Llama2-7b-chat with Huggingface API, and achieves Retrieval Augmented Generation (RAG) leveraging Llama-index. Specifically, a JSON parser is used to read all the JSON-format FrameNet frame data, and create a query engine with vector store index for querying.
 
+When using `get_query_engine()`, the index created upon reading data files would be saved to `./query_engine.index/`, and be automatically loaded when getting query engine next time. To avoid saving index data locally, you can specify `save_index=False` as a parameter for `get_query_engine()`.
+
 ### Usage
 
 ```python
