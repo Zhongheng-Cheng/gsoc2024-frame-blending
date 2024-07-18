@@ -43,9 +43,9 @@ def get_query_engine(save_index=True):
 def generate_response(query_engine, prompt, display=True):
     response = query_engine.query(prompt)
     if display:
-        print(">>> prompt")
+        print("\n**_prompt_**\n")
         print(prompt)
-        print(">>> response")
+        print("\n**_response_**\n")
         print(response)
     return response
 
@@ -71,3 +71,23 @@ def multi_conversation(query_engine):
         print(response)
     return 
 
+def multi_queries(query_engine, prompts:list=[], memory=False):
+    conversations = []
+    for prompt in prompts:
+        conversations.append({
+            "role": "user",
+            "content": prompt
+        })
+        if memory:
+            formatted_conversations = "\n".join(
+                [f"User: {conv['content']}" if conv['role'] == "user" else f"Assistant: {conv['content']}" for conv in conversations]
+            )
+            full_prompt = f"{formatted_conversations}\nUser: {prompt}\nAssistant:"
+        else:
+            full_prompt = prompt
+        response = query_engine.query(full_prompt)
+        conversations.append({
+            "role": "assistant",
+            "content": response
+        })
+    return conversations
