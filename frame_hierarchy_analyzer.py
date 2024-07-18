@@ -1,4 +1,5 @@
 import json
+import os
 
 # A dictionary mapping frame relations to their verbal descriptors.
 # Currently do not contain "Precedes", "Is Preceded by", "Is Inchoative of", "Is Causative of".
@@ -115,6 +116,9 @@ class RootFrameNode(FrameNode):
             if node in self.next.values():
                 self.delete(node.name)
         return
+    
+def get_frames(foldername):
+    return [file[:-4] for file in os.listdir(foldername) if file[-4:] == ".xml"]
 
 def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=False):
     """
@@ -177,21 +181,6 @@ def analyze_all_relations(frames):
         # save_hierarchy_to_file(root, f"tmp_result_{frame_relation}.txt")
     return
 
-if __name__ == "__main__":
-
-    # Get hierarchy
-    import os
-    frame_folder = "frame"
-    frames = [file[:-4] for file in os.listdir(frame_folder) if file[-4:] == ".xml"]
-    frame_relation = "Inheritance"
-    root = analyze_hierarchy(frames, frame_relation)
-
-    # TEST
-    print(root.find("Event"))
-    # level1_nodes = root.children()
-    # level1_nodes.sort(key=lambda x: x.count_nodes(), reverse=True)
-    # for i in range(10):
-    #     print(level1_nodes[i].name)
     
 
     
