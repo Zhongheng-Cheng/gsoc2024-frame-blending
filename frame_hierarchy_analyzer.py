@@ -117,8 +117,8 @@ class RootFrameNode(FrameNode):
                 self.delete(node.name)
         return
     
-def get_frames(foldername):
-    return [file[:-4] for file in os.listdir(foldername) if file[-4:] == ".xml"]
+def get_frames(foldername, suffix=".xml"):
+    return [file[:-4] for file in os.listdir(foldername) if file[-4:] == suffix]
 
 def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=False):
     """
