@@ -9,49 +9,47 @@ def new_window(title, nlines, ncols, begin_y, begin_x):
     return win
 
 def main(stdscr):
-
-    def update_key_window():
-        keys = [
-            "A: Switch window",
-            "B: 22222",
-            "C: 3333"
-        ]
-        wins['key'] = new_window(title = "Keys", 
-                                nlines = len(keys) + 2, 
-                                ncols = max([len(i) for i in keys]) + 2, 
-                                begin_y = 0, 
-                                begin_x = 0
-                                )
-        for i, key in enumerate(keys):
-            wins['key'].addstr(i + 1, 1, key)
-        wins['key'].refresh()
     
     def update_window(name, content, begin_y, begin_x):
-        lines = content.split('\n')
-        wins[name] = new_window(title = name[0].upper() + name[1:],
-                                nlines = len(lines) + 2,
-                                ncols = max([len(i) for i in lines]) + 2,
+        assert type(content) in [str, list]
+        if type(content) == str:
+            lines = content.split('\n')
+        elif type(content) == list:
+            lines = content
+        nlines = len(lines) + 2
+        ncols = max([len(i) for i in lines]) + 2
+        wins[name] = new_window(title = name,
+                                nlines = nlines,
+                                ncols = ncols,
                                 begin_y = begin_y,
                                 begin_x = begin_x
                                 )
         for i, line in enumerate(lines):
             wins[name].addstr(i + 1, 1, line)
         wins[name].refresh()
+        return nlines + begin_y, ncols + begin_x
 
     wins = {"main": stdscr}
     curses.curs_set(False)
     wins["main"].clear()
     wins["main"].refresh()
-    update_key_window()
+    key_content = [
+        "ctrl + C: Quit",
+        "A: Switch window",
+        "B: 22222",
+        "C: 3333"
+    ]
+    key_end_y, key_end_x = update_window("key", key_content, 0, 0)
     
     input_word = ""
     
+    
     while True:
-        update_window("Input 1", f"Enter a word and press Enter: {input_word}", 0, 20)
+        input1_end_y, input1_end_x = update_window("input_1", f"Enter a word and press Enter: {input_word}", 0, key_end_x)
         key = stdscr.getch()
         
         if key == ord('\n'):
-            update_window("Frame Relation 1", str(root.find(input_word)), 8, 20)
+            update_window("frame Relation 1", str(root.find(input_word)), input1_end_y, key_end_x)
         
         elif key == curses.KEY_BACKSPACE or key == 127:
             if len(input_word) > 0:
@@ -60,10 +58,7 @@ def main(stdscr):
             input_word += chr(key)
         
         stdscr.refresh()
-    
-    
-    
-    stdscr.getch()
+
 
 def tmp_main(stdscr):
     # Clear screen
