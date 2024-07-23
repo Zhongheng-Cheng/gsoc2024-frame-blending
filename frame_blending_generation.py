@@ -18,11 +18,8 @@ class Window():
             title_len = len(title)
             self.ncols = max(line_len, title_len) + 2
         self.win = curses.newwin(self.nlines, self.ncols, begin_y, begin_x)
-        self.win.border()
-        self.win.addstr(0, max(0, (self.ncols - len(self.title)) // 2), self.title)
-        self.win.refresh()
-        self.update_content(content)
         self.focus = False
+        self.update_content(content)
         return
     
     def end_yx(self):
@@ -39,6 +36,9 @@ class Window():
         return
     
     def update_content(self, content):
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
         lines = content.split('\n')
         for i, line in enumerate(lines):
             self.win.addstr(i + 1, 1, line)
@@ -49,13 +49,32 @@ class WindowGroup():
         self.focus_index = 0
         self.wins = wins
         self.update_windows_focus()
+        self.word_input_count = 0
         return
     
     # def __getattribute__(self, __name: str) -> Window:
     #     return self.wins[__name]
     
-    def add(self, title, win):
-        self.wins[title] = win
+    def add(self, win):
+        self.wins[win.title] = win
+        self.update_windows_focus()
+        return
+    
+    def add_word_input(self, start_y, start_x):
+        self.word_input_count += 1
+        title = f"Word {self.word_input_count}"
+        win_input = Window(title, start_y, start_x, ncols=20)
+        win_input.word = ""
+        self.add(win_input)
+        return
+    
+    def remove_word_input(self):
+        if self.word_input_count > 1:
+            title = f"Word {self.word_input_count}"
+            self.wins[title].win.clear()
+            self.wins[title].win.refresh()
+            del self.wins[title]
+            self.word_input_count -= 1
         return
     
     def update_windows_focus(self):
@@ -89,12 +108,10 @@ Tab: Switch window
 B: ...
 C: ..."""
     win_key = Window("key", 0, 0, content=win_key_content)
+    window_group = WindowGroup()
+    window_group.add_word_input(0, win_key.end_yx()[1])
 
-    win_input_1 = Window("Frame_1", 0, win_key.end_yx()[1], ncols=20)
-    win_input_1.word = ""
-    win_input_2 = Window("Frame_2", 0, win_input_1.end_yx()[1], ncols=20)
-    win_input_2.word = ""
-    wins_group = WindowGroup({win.title: win for win in [win_input_1, win_input_2]})
+    win_tmp = Window("TMP", 30, 0, ncols=100, content="111")
     
     while True:
 
@@ -102,13 +119,17 @@ C: ..."""
         
         if key == ord('\n'):
             pass
-        elif key == curses.KEY_TAB: # Tab
-            wins_group.next_focus()
+        elif key == 9: # Tab
+            window_group.next_focus()
+        elif key == ord('+'):
+            window_group.add_word_input(window_group.word_input_count * 4, win_key.end_yx()[1])
+        elif key == ord('-'):
+            window_group.remove_word_input()
         elif key == curses.KEY_BACKSPACE or key == 127:
-            wins_group.focus_win().word = wins_group.focus_win().word[:-1]
+            window_group.focus_win().word = window_group.focus_win().word[:-1]
         else:
-            wins_group.focus_win().word += chr(key)
-        wins_group.focus_win().update_content(wins_group.focus_win().word)
+            window_group.focus_win().word += chr(key)
+        window_group.focus_win().update_content(window_group.focus_win().word)
         
         stdscr.refresh()
 
