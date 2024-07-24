@@ -55,9 +55,6 @@ class WindowGroup():
         self.cursor_x = 0
         return
     
-    # def __getattribute__(self, __name: str) -> Window:
-    #     return self.wins[__name]
-    
     def add(self, win):
         self.wins[win.title] = win
         self.update_windows_focus()
@@ -71,9 +68,9 @@ class WindowGroup():
         self.add(win_input)
         return
     
-    def add_frame_hierarchy(self):
-        title = "Frame Hierarchy"
-        content = str(root.find(self.focus_win().frame))
+    def add_frame_hierarchy(self, frame_relation_control):
+        title = frame_relation_control.hierarchy_title()
+        content = str(frame_relation_control.hierarchy_root().find(self.focus_win().frame))
         win = Window(title, 0, self.wins["Frame 1"].end_yx()[1], content=content)
         self.win_hier = win
         return
@@ -124,13 +121,38 @@ class WindowGroup():
         self.focus_win().win.move(1, self.cursor_x + 1)
         self.focus_win().win.refresh()
         return
+
+
+class FrameRelationGroup():
+    def __init__(self, frames):
+        self.roots = {}
+        self.index = 0
+        self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
+        for relation in self.relations:
+            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation)
+            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True)
+        return
+    
+    def hierarchy_title(self):
+        return list(self.roots.keys())[self.index]
+    
+    def hierarchy_root(self):
+        title = self.hierarchy_title()
+        return self.roots[title]
+    
+    def next_relation(self):
+        self.index = (self.index + 1) % len(self.roots)
+        return
+    
+    def reset_index(self):
+        self.index = 0
+        return
     
 
 def main(stdscr):
-    # win_tmp = Window("TMP", 30, 0, ncols=100, content="test")
-
-    # win_tmp.update_content(f"{len(lines) + 1}, {len(lines[-1]) + 1}")
-
+    foldername = "frame"
+    frames = get_frames(foldername)
+    frame_relation_control = FrameRelationGroup(frames)
     stdscr.clear()
     stdscr.refresh()
 
@@ -152,19 +174,15 @@ ESC:        Quit
 +:          Add Frame
 -:          Remove Frame
 Arrow
-up/down:    Switch frame
+ up/down:   Switch frame
 Enter:      Confirm frame
-        & Enter hierarchy
-Tab:        ..."""
+          & Enter hierarchy
+Tab:        Switch relation"""
     win_key = Window("key", 0, 0, content=win_key_content)
 
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
 
-
-    # win_tmp = Window("TMP", 30, 0, ncols=100, content="test")
-    
-    # win_tmp = Window("TMP", 30, 0, ncols=100, content="test")
 
     while True:
         window_group.update_cursor()
@@ -187,6 +205,10 @@ Tab:        ..."""
         elif key == ord('-'):
             window_group.remove_frame_input()
 
+        # Switch Frame Hierarchy
+        elif key == ord('\t') or key == 9: # TAB
+            frame_relation_control.next_relation()
+
         # Enter frame Hierarchy
         elif key == ord('\n'):
             pass
@@ -205,9 +227,9 @@ Tab:        ..."""
 
         if window_group.win_hier:
             window_group.remove_frame_hierarchy()
-        hierarchy = root.find(window_group.focus_win().frame)
+        hierarchy = frame_relation_control.hierarchy_root().find(window_group.focus_win().frame)
         if hierarchy:
-            window_group.add_frame_hierarchy()
+            window_group.add_frame_hierarchy(frame_relation_control)
 
         window_group.focus_win().update_content(window_group.focus_win().frame)
         stdscr.refresh()
@@ -216,10 +238,6 @@ Tab:        ..."""
 
 
 if __name__ == "__main__":
-    foldername = "frame"
-    frames = get_frames(foldername)
-    frame_relation = "Inheritance"
-    root = analyze_hierarchy(frames, frame_relation)
     curses.initscr()
     curses.start_color()
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
