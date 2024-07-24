@@ -107,6 +107,19 @@ def main(stdscr):
     stdscr.clear()
     stdscr.refresh()
 
+    logo = """\
+    ______                             ____  __               __         
+   / ____/________ _____ ___  ___     / __ )/ /__  ____  ____/ /__  _____
+  / /_  / ___/ __ `/ __ `__ \/ _ \   / __  / / _ \/ __ \/ __  / _ \/ ___/
+ / __/ / /  / /_/ / / / / / /  __/  / /_/ / /  __/ / / / /_/ /  __/ /    
+/_/   /_/   \__,_/_/ /_/ /_/\___/  /_____/_/\___/_/ /_/\__,_/\___/_/     
+"""
+    logo_content = logo.split('\n')
+    height, width = stdscr.getmaxyx()
+    start_y = height - len(logo_content) - 2
+    start_x = width - max(len(line) for line in logo_content) - 2
+    win_logo = Window("", start_y, start_x, content=logo)
+
     win_key_content = """\
 ESC: Quit
 +: Add Frame
