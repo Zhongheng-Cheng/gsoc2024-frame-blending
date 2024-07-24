@@ -49,6 +49,7 @@ class WindowGroup():
     def __init__(self, wins={}):
         self.focus_index = 0
         self.wins = wins
+        self.win_hier = None
         self.update_windows_focus()
         self.frame_input_count = 0
         self.cursor_x = 0
@@ -70,6 +71,13 @@ class WindowGroup():
         self.add(win_input)
         return
     
+    def add_frame_hierarchy(self):
+        title = "Frame Hierarchy"
+        content = str(root.find(self.focus_win().frame))
+        win = Window(title, 0, self.wins["Frame 1"].end_yx()[1], content=content)
+        self.win_hier = win
+        return
+
     def remove_frame_input(self):
         if self.frame_input_count > 1:
             title = f"Frame {self.frame_input_count}"
@@ -77,6 +85,14 @@ class WindowGroup():
             self.wins[title].win.refresh()
             del self.wins[title]
             self.frame_input_count -= 1
+        return
+    
+    def remove_frame_hierarchy(self):
+        win = self.win_hier
+        win.win.clear()
+        win.win.refresh()
+        del win
+        self.win_hier = None
         return
     
     def update_windows_focus(self):
@@ -132,12 +148,14 @@ def main(stdscr):
     win_logo = Window("", start_y, start_x, content=logo)
 
     win_key_content = """\
-ESC: Quit
-+: Add Frame
--: Remove Frame
-up/down: Switch frame
-Enter: Confirm frame
-Tab: ..."""
+ESC:        Quit
++:          Add Frame
+-:          Remove Frame
+Arrow
+up/down:    Switch frame
+Enter:      Confirm frame
+        & Enter hierarchy
+Tab:        ..."""
     win_key = Window("key", 0, 0, content=win_key_content)
 
     window_group = WindowGroup()
@@ -168,6 +186,10 @@ Tab: ..."""
             window_group.add_frame_input(window_group.frame_input_count * 4, win_key.end_yx()[1])
         elif key == ord('-'):
             window_group.remove_frame_input()
+
+        # Enter frame Hierarchy
+        elif key == ord('\n'):
+            pass
         
         # Text operations
         elif key == curses.KEY_BACKSPACE or key == 127:
@@ -180,6 +202,12 @@ Tab: ..."""
         else: # input characters
             window_group.focus_win().frame = window_group.focus_win().frame[:window_group.cursor_x] + chr(key) + window_group.focus_win().frame[window_group.cursor_x:]
             window_group.cursor_x += 1
+
+        if window_group.win_hier:
+            window_group.remove_frame_hierarchy()
+        hierarchy = root.find(window_group.focus_win().frame)
+        if hierarchy:
+            window_group.add_frame_hierarchy()
 
         window_group.focus_win().update_content(window_group.focus_win().frame)
         stdscr.refresh()
