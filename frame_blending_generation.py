@@ -49,7 +49,7 @@ class WindowGroup():
         self.focus_index = 0
         self.wins = wins
         self.update_windows_focus()
-        self.word_input_count = 0
+        self.frame_input_count = 0
         return
     
     # def __getattribute__(self, __name: str) -> Window:
@@ -60,21 +60,21 @@ class WindowGroup():
         self.update_windows_focus()
         return
     
-    def add_word_input(self, start_y, start_x):
-        self.word_input_count += 1
-        title = f"Word {self.word_input_count}"
+    def add_frame_input(self, start_y, start_x):
+        self.frame_input_count += 1
+        title = f"Frame {self.frame_input_count}"
         win_input = Window(title, start_y, start_x, ncols=20)
-        win_input.word = ""
+        win_input.frame = ""
         self.add(win_input)
         return
     
-    def remove_word_input(self):
-        if self.word_input_count > 1:
-            title = f"Word {self.word_input_count}"
+    def remove_frame_input(self):
+        if self.frame_input_count > 1:
+            title = f"Frame {self.frame_input_count}"
             self.wins[title].win.clear()
             self.wins[title].win.refresh()
             del self.wins[title]
-            self.word_input_count -= 1
+            self.frame_input_count -= 1
         return
     
     def update_windows_focus(self):
@@ -87,6 +87,11 @@ class WindowGroup():
     
     def next_focus(self):
         self.focus_index = (self.focus_index + 1) % len(self.wins)
+        self.update_windows_focus()
+        return
+    
+    def prev_focus(self):
+        self.focus_index = (self.focus_index - 1 + len(self.wins)) % len(self.wins)
         self.update_windows_focus()
         return
     
@@ -103,35 +108,41 @@ def main(stdscr):
     stdscr.refresh()
 
     win_key_content = """\
-ctrl+C: Quit
-Tab: Switch window
-B: ...
-C: ..."""
+ESC: Quit
++: Add Frame
+-: Remove Frame
+up/down: Switch frame
+Enter: Confirm frame
+Tab: ..."""
     win_key = Window("key", 0, 0, content=win_key_content)
     window_group = WindowGroup()
-    window_group.add_word_input(0, win_key.end_yx()[1])
+    window_group.add_frame_input(0, win_key.end_yx()[1])
 
-    win_tmp = Window("TMP", 30, 0, ncols=100, content="111")
+    # win_tmp = Window("TMP", 30, 0, ncols=100, content="test")
     
     while True:
 
         key = stdscr.getch()
         
-        if key == ord('\n'):
-            pass
-        elif key == 9: # Tab
+        if key == 27: # ESC
+            break
+        elif key == curses.KEY_DOWN:
             window_group.next_focus()
+        elif key == curses.KEY_UP:
+            window_group.prev_focus()
         elif key == ord('+'):
-            window_group.add_word_input(window_group.word_input_count * 4, win_key.end_yx()[1])
+            window_group.add_frame_input(window_group.frame_input_count * 4, win_key.end_yx()[1])
         elif key == ord('-'):
-            window_group.remove_word_input()
+            window_group.remove_frame_input()
         elif key == curses.KEY_BACKSPACE or key == 127:
-            window_group.focus_win().word = window_group.focus_win().word[:-1]
+            window_group.focus_win().frame = window_group.focus_win().frame[:-1]
         else:
-            window_group.focus_win().word += chr(key)
-        window_group.focus_win().update_content(window_group.focus_win().word)
+            window_group.focus_win().frame += chr(key)
+        window_group.focus_win().update_content(window_group.focus_win().frame)
         
         stdscr.refresh()
+    
+    return
 
 
 if __name__ == "__main__":
