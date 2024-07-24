@@ -35,7 +35,7 @@ class Window():
         self.win.refresh()
         return
     
-    def update_content(self, content):
+    def update_content(self, content: str):
         self.win.clear()
         self.win.border()
         self.update_focus(self.focus)
@@ -43,6 +43,7 @@ class Window():
         for i, line in enumerate(lines):
             self.win.addstr(i + 1, 1, line)
         self.win.refresh()
+        return
 
 class WindowGroup():
     def __init__(self, wins={}):
@@ -50,6 +51,7 @@ class WindowGroup():
         self.wins = wins
         self.update_windows_focus()
         self.frame_input_count = 0
+        self.cursor_x = 0
         return
     
     # def __getattribute__(self, __name: str) -> Window:
@@ -81,6 +83,7 @@ class WindowGroup():
         for i, win in enumerate(self.wins.values()):
             if i == self.focus_index:
                 win.update_focus(True)
+                self.cursor_x = len(win.frame)
             else:
                 win.update_focus(False)
         return
@@ -100,20 +103,28 @@ class WindowGroup():
         win = self.wins[title]
         return win
     
+    def update_cursor(self):
+        curses.curs_set(2)
+        self.focus_win().win.move(1, self.cursor_x + 1)
+        self.focus_win().win.refresh()
+        return
+    
 
 def main(stdscr):
+    # win_tmp = Window("TMP", 30, 0, ncols=100, content="test")
 
-    curses.curs_set(False)
+    # win_tmp.update_content(f"{len(lines) + 1}, {len(lines[-1]) + 1}")
+
     stdscr.clear()
     stdscr.refresh()
 
-    logo = """\
+    logo = r"""
     ______                             ____  __               __         
    / ____/________ _____ ___  ___     / __ )/ /__  ____  ____/ /__  _____
   / /_  / ___/ __ `/ __ `__ \/ _ \   / __  / / _ \/ __ \/ __  / _ \/ ___/
  / __/ / /  / /_/ / / / / / /  __/  / /_/ / /  __/ / / / /_/ /  __/ /    
 /_/   /_/   \__,_/_/ /_/ /_/\___/  /_____/_/\___/_/ /_/\__,_/\___/_/     
-"""
+"""[1:] # remove the '\n' in the front
     logo_content = logo.split('\n')
     height, width = stdscr.getmaxyx()
     start_y = height - len(logo_content) - 2
@@ -128,31 +139,49 @@ up/down: Switch frame
 Enter: Confirm frame
 Tab: ..."""
     win_key = Window("key", 0, 0, content=win_key_content)
+
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
 
+
     # win_tmp = Window("TMP", 30, 0, ncols=100, content="test")
     
+    # win_tmp = Window("TMP", 30, 0, ncols=100, content="test")
+
     while True:
+        window_group.update_cursor()
 
         key = stdscr.getch()
         
+        # Quit
         if key == 27: # ESC
             break
+
+        # Switch frame
         elif key == curses.KEY_DOWN:
             window_group.next_focus()
         elif key == curses.KEY_UP:
             window_group.prev_focus()
+
+        # Add/remove frame
         elif key == ord('+'):
             window_group.add_frame_input(window_group.frame_input_count * 4, win_key.end_yx()[1])
         elif key == ord('-'):
             window_group.remove_frame_input()
-        elif key == curses.KEY_BACKSPACE or key == 127:
-            window_group.focus_win().frame = window_group.focus_win().frame[:-1]
-        else:
-            window_group.focus_win().frame += chr(key)
-        window_group.focus_win().update_content(window_group.focus_win().frame)
         
+        # Text operations
+        elif key == curses.KEY_BACKSPACE or key == 127:
+            window_group.focus_win().frame = window_group.focus_win().frame[:window_group.cursor_x - 1] + window_group.focus_win().frame[window_group.cursor_x:]
+            window_group.cursor_x = max(window_group.cursor_x - 1, 0)
+        elif key == curses.KEY_LEFT:
+            window_group.cursor_x = max(window_group.cursor_x - 1, 0)
+        elif key == curses.KEY_RIGHT:
+            window_group.cursor_x = min(window_group.cursor_x + 1, len(window_group.focus_win().frame))
+        else: # input characters
+            window_group.focus_win().frame = window_group.focus_win().frame[:window_group.cursor_x] + chr(key) + window_group.focus_win().frame[window_group.cursor_x:]
+            window_group.cursor_x += 1
+
+        window_group.focus_win().update_content(window_group.focus_win().frame)
         stdscr.refresh()
     
     return
