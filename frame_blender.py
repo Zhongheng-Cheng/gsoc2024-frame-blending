@@ -4,44 +4,50 @@ import curses
 class Window():
     def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
         self.title = title
+        self.content = content
         self.begin_y = begin_y
         self.begin_x = begin_x
+        self.start_line = 0
         lines = content.split('\n')
         if nlines:
-            self.nlines = nlines + 2
+            self.nlines = nlines
         else:
-            self.nlines = len(lines) + 2
+            self.nlines = len(lines)
         if ncols:
-            self.ncols = ncols + 2
+            self.ncols = ncols
         else:
             line_len = max([len(i) for i in lines])
             title_len = len(title)
-            self.ncols = max(line_len, title_len) + 2
-        self.win = curses.newwin(self.nlines, self.ncols, begin_y, begin_x)
+            self.ncols = max(line_len, title_len)
+        self.win = curses.newwin(self.nlines + 2, self.ncols + 2, begin_y, begin_x)
         self.focus = False
         self.update_content(content)
         return
     
     def end_yx(self):
-        return self.nlines + self.begin_y, self.ncols + self.begin_x
+        return self.nlines + 2 + self.begin_y, self.ncols + 2 + self.begin_x
     
     def update_focus(self, focus: bool):
         if focus:
             self.focus = True
-            self.win.addstr(0, max(0, (self.ncols - len(self.title)) // 2), self.title, curses.color_pair(1) | curses.A_BOLD | curses.A_UNDERLINE)
+            self.win.addstr(0, max(0, (self.ncols + 2 - len(self.title)) // 2), self.title, curses.color_pair(1) | curses.A_BOLD | curses.A_UNDERLINE)
         else:
             self.focus = False
-            self.win.addstr(0, max(0, (self.ncols - len(self.title)) // 2), self.title)
+            self.win.addstr(0, max(0, (self.ncols + 2 - len(self.title)) // 2), self.title)
         self.win.refresh()
         return
     
-    def update_content(self, content: str):
+    def update_content(self, content: str = "", start_line: int = 0):
+        if not content:
+            content = self.content
+        else:
+            self.content = content
         self.win.clear()
         self.win.border()
         self.update_focus(self.focus)
         lines = content.split('\n')
-        for i, line in enumerate(lines):
-            self.win.addstr(i + 1, 1, line)
+        for i in range(min(self.nlines, len(lines) - start_line)):
+            self.win.addstr(i + 1, 1, lines[i + start_line][:self.ncols])
         self.win.refresh()
         return
 
@@ -71,7 +77,8 @@ class WindowGroup():
     def add_frame_hierarchy(self, frame_relation_control):
         title = frame_relation_control.hierarchy_title()
         content = str(frame_relation_control.hierarchy_root().find(self.focus_win().frame))
-        win = Window(title, 0, self.wins["Frame 1"].end_yx()[1], content=content)
+        win = Window(title, 0, self.wins["Frame 1"].end_yx()[1], nlines=stdscr_height-2, content=content)
+        win.update_content(start_line=3)
         self.win_hier = win
         return
 
@@ -150,6 +157,8 @@ class FrameRelationGroup():
     
 
 def main(stdscr):
+    global stdscr_height, stdscr_width
+
     foldername = "frame"
     frames = get_frames(foldername)
     frame_relation_control = FrameRelationGroup(frames)
@@ -164,9 +173,9 @@ def main(stdscr):
 /_/   /_/   \__,_/_/ /_/ /_/\___/  /_____/_/\___/_/ /_/\__,_/\___/_/     
 """[1:] # remove the '\n' in the front
     logo_lines = win_logo_content.split('\n')
-    height, width = stdscr.getmaxyx()
-    start_y = height - len(logo_lines) - 2
-    start_x = width - max(len(line) for line in logo_lines) - 2
+    stdscr_height, stdscr_width = stdscr.getmaxyx()
+    start_y = stdscr_height - len(logo_lines) - 2
+    start_x = stdscr_width - max(len(line) for line in logo_lines) - 2
     win_logo = Window("", start_y, start_x, content=win_logo_content)
 
     win_key_content = """\
@@ -178,7 +187,7 @@ Arrow
 Enter:      Confirm frame
           & Enter hierarchy
 Tab:        Switch relation"""
-    win_key = Window("key", 0, 0, content=win_key_content)
+    win_key = Window("Keys", 0, 0, content=win_key_content)
 
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
@@ -229,8 +238,8 @@ Tab:        Switch relation"""
         if window_group.win_hier:
             window_group.remove_frame_hierarchy()
 
-        win_logo.update_content(win_logo_content)
-        win_key.update_content(win_key_content)
+        win_logo.update_content()
+        win_key.update_content()
 
         hierarchy = frame_relation_control.hierarchy_root().find(window_group.focus_win().frame)
         if hierarchy:
