@@ -156,18 +156,18 @@ def main(stdscr):
     stdscr.clear()
     stdscr.refresh()
 
-    logo = r"""
+    win_logo_content = r"""
     ______                             ____  __               __         
    / ____/________ _____ ___  ___     / __ )/ /__  ____  ____/ /__  _____
   / /_  / ___/ __ `/ __ `__ \/ _ \   / __  / / _ \/ __ \/ __  / _ \/ ___/
  / __/ / /  / /_/ / / / / / /  __/  / /_/ / /  __/ / / / /_/ /  __/ /    
 /_/   /_/   \__,_/_/ /_/ /_/\___/  /_____/_/\___/_/ /_/\__,_/\___/_/     
 """[1:] # remove the '\n' in the front
-    logo_content = logo.split('\n')
+    logo_lines = win_logo_content.split('\n')
     height, width = stdscr.getmaxyx()
-    start_y = height - len(logo_content) - 2
-    start_x = width - max(len(line) for line in logo_content) - 2
-    win_logo = Window("", start_y, start_x, content=logo)
+    start_y = height - len(logo_lines) - 2
+    start_x = width - max(len(line) for line in logo_lines) - 2
+    win_logo = Window("", start_y, start_x, content=win_logo_content)
 
     win_key_content = """\
 ESC:        Quit
@@ -224,9 +224,14 @@ Tab:        Switch relation"""
         else: # input characters
             window_group.focus_win().frame = window_group.focus_win().frame[:window_group.cursor_x] + chr(key) + window_group.focus_win().frame[window_group.cursor_x:]
             window_group.cursor_x += 1
-
+        
+        # Update windows display
         if window_group.win_hier:
             window_group.remove_frame_hierarchy()
+
+        win_logo.update_content(win_logo_content)
+        win_key.update_content(win_key_content)
+
         hierarchy = frame_relation_control.hierarchy_root().find(window_group.focus_win().frame)
         if hierarchy:
             window_group.add_frame_hierarchy(frame_relation_control)
