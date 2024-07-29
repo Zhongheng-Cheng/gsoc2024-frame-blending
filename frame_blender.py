@@ -37,7 +37,7 @@ class Window():
         self.win.refresh()
         return
     
-    def update_content(self, content: str = "", start_line: int = 0):
+    def update_content(self, content: str = ""):
         if not content:
             content = self.content
         else:
@@ -46,9 +46,45 @@ class Window():
         self.win.border()
         self.update_focus(self.focus)
         lines = content.split('\n')
-        for i in range(min(self.nlines, len(lines) - start_line)):
-            self.win.addstr(i + 1, 1, lines[i + start_line][:self.ncols])
+        for i in range(min(self.nlines, len(lines))):
+            self.win.addstr(i + 1, 1, lines[i][:self.ncols])
         self.win.refresh()
+        return
+    
+class HierarchyWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
+        self.start_line = 0
+        self.focus_line_index = 0
+        return
+    
+    def update_content(self, content: str = ""):
+        if not content:
+            content = self.content
+        else:
+            self.content = content
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
+        lines = content.split('\n')
+        for i in range(min(self.nlines, len(lines) - self.start_line)):
+            self.win.addstr(i + 1, 1, lines[i + self.start_line][:self.ncols])
+        if self.focus == True:
+            focus_line = lines[self.focus_line_index]
+            start_index = focus_line.rfind(' ') + 1
+            self.win.addstr(self.focus_line_index - self.start_line + 1, start_index + 1, focus_line[start_index:], curses.color_pair(2))
+        self.win.refresh()
+        return
+    
+    def next_frame(self):
+        content_nlines = len(self.content.split('\n'))
+        self.focus_line_index = min(self.focus_line_index + 1, content_nlines - 1)
+        self.start_line = max(self.start_line, self.focus_line_index - self.nlines + 1)
+        return
+    
+    def prev_frame(self):
+        self.focus_line_index = max(self.focus_line_index - 1, 0)
+        self.start_line = min(self.focus_line_index, self.start_line)
         return
 
 class WindowGroup():
@@ -74,8 +110,8 @@ class WindowGroup():
     
     def add_frame_hierarchy(self, frame_relation_control):
         title = frame_relation_control.hierarchy_title()
-        content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content))
-        win = Window(title, 0, self.wins[0][0].end_yx()[1], nlines=stdscr_height-2, content=content)
+        content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content)).strip()
+        win = HierarchyWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
         return
 
@@ -88,6 +124,8 @@ class WindowGroup():
     
     def remove_frame_hierarchy(self):
         win = self.wins[1][0]
+        win.start_line = 0
+        win.focus_line_index = 0
         win.win.clear()
         win.win.refresh()
         del self.wins[1][0]
@@ -120,6 +158,9 @@ class WindowGroup():
         return
 
     def quit_hier_focus(self):
+        win = self.wins[1][0]
+        win.update_focus(False)
+        win.update_content()
         self.focus_index = self._tmp_focus_index
         self.update_cursor()
         self.update_windows_focus()
@@ -205,6 +246,10 @@ Tab:        Switch relation"""
     window_group.update_cursor()
 
     while True:
+
+        # Refresh windows display
+        win_logo.update_content()
+        window_group.focus_win().update_content()
         
         key = stdscr.getch()
         
@@ -264,11 +309,13 @@ Tab:        Switch relation"""
             
             elif key == curses.KEY_BACKSPACE or key == 127:
                 window_group.quit_hier_focus()
+            
+            # Switch frame
+            if key == curses.KEY_DOWN:
+                window_group.wins[1][0].next_frame()
+            elif key == curses.KEY_UP:
+                window_group.wins[1][0].prev_frame()
         
-        # Refresh windows display
-        win_logo.update_content()
-        window_group.focus_win().update_content()
-    
     return
 
 
@@ -276,4 +323,5 @@ if __name__ == "__main__":
     curses.initscr()
     curses.start_color()
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
     curses.wrapper(main)
