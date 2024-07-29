@@ -56,6 +56,7 @@ class HierarchyWindow(Window):
         super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         self.start_line = 0
         self.focus_line_index = 0
+        self.selected_frame = ''
         return
     
     def update_content(self, content: str = ""):
@@ -72,6 +73,7 @@ class HierarchyWindow(Window):
         if self.focus == True:
             focus_line = lines[self.focus_line_index]
             start_index = focus_line.rfind(' ') + 1
+            self.selected_frame = focus_line[start_index:]
             self.win.addstr(self.focus_line_index - self.start_line + 1, start_index + 1, focus_line[start_index:], curses.color_pair(2))
         self.win.refresh()
         return
@@ -86,6 +88,7 @@ class HierarchyWindow(Window):
         self.focus_line_index = max(self.focus_line_index - 1, 0)
         self.start_line = min(self.focus_line_index, self.start_line)
         return
+
 
 class WindowGroup():
     def __init__(self):
@@ -274,8 +277,9 @@ Tab:        Switch relation"""
             
             # Enter frame Hierarchy
             elif key == ord('\n'):
-                window_group.enter_hier_focus()
-                continue
+                if window_group.focus_win().content and window_group.wins[1]:
+                    window_group.enter_hier_focus()
+                    continue
 
             # Text operations
             else:
@@ -307,14 +311,22 @@ Tab:        Switch relation"""
             if key == ord('\t') or key == 9: # TAB
                 frame_relation_control.next_relation()
             
+            # Quit frame hierarchy
             elif key == curses.KEY_BACKSPACE or key == 127:
                 window_group.quit_hier_focus()
             
             # Switch frame
-            if key == curses.KEY_DOWN:
+            elif key == curses.KEY_DOWN:
                 window_group.wins[1][0].next_frame()
             elif key == curses.KEY_UP:
                 window_group.wins[1][0].prev_frame()
+            
+            # Confirm frame
+            elif key == ord('\n'):
+                frame = window_group.wins[1][0].selected_frame
+                window_group.quit_hier_focus()
+                window_group.remove_frame_hierarchy()
+                window_group.focus_win().update_content(frame)
         
     return
 
