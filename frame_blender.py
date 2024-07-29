@@ -58,7 +58,6 @@ class WindowGroup():
             [], # frame input windows
             [], # hierarchy windows
         ]
-        self.cursor_x = 0
         return
     
     def add(self, win, column=0):
@@ -69,6 +68,7 @@ class WindowGroup():
     def add_frame_input(self, start_y, start_x):
         title = f"Frame {len(self.wins[0]) + 1}"
         win_input = Window(title, start_y, start_x, ncols=20)
+        win_input.cursor_x = 0
         self.add(win_input)
         return
     
@@ -87,7 +87,7 @@ class WindowGroup():
         return
     
     def remove_frame_hierarchy(self):
-        win = self.win[1][0]
+        win = self.wins[1][0]
         win.win.clear()
         win.win.refresh()
         del self.wins[1][0]
@@ -97,9 +97,9 @@ class WindowGroup():
         for col in self.wins:
             for win in col:
                 win.update_focus(False)
-        focus = self.focus_win()
-        focus.update_focus(True)
-        self.cursor_x = len(focus.content)
+        win = self.focus_win()
+        win.update_focus(True)
+        win.cursor_x = len(win.content)
         return
     
     def next_focus(self):
@@ -114,12 +114,16 @@ class WindowGroup():
     
     def enter_hier_focus(self):
         curses.curs_set(0)
+        self._tmp_focus_index = self.focus_index
         self.focus_index = [1, 0]
         self.update_windows_focus()
         return
 
     def quit_hier_focus(self):
-        pass
+        self.focus_index = self._tmp_focus_index
+        self.update_cursor()
+        self.update_windows_focus()
+        return
     
     def focus_win(self) -> Window:
         """
@@ -131,8 +135,9 @@ class WindowGroup():
     
     def update_cursor(self):
         curses.curs_set(2)
-        self.focus_win().win.move(1, self.cursor_x + 1)
-        self.focus_win().win.refresh()
+        win = self.focus_win()
+        win.win.move(1, win.cursor_x + 1)
+        win.win.refresh()
         return
 
 
@@ -228,16 +233,18 @@ Tab:        Switch relation"""
                 continue
 
             # Text operations
-            elif key == curses.KEY_BACKSPACE or key == 127:
-                window_group.focus_win().content = window_group.focus_win().content[:window_group.cursor_x - 1] + window_group.focus_win().content[window_group.cursor_x:]
-                window_group.cursor_x = max(window_group.cursor_x - 1, 0)
-            elif key == curses.KEY_LEFT:
-                window_group.cursor_x = max(window_group.cursor_x - 1, 0)
-            elif key == curses.KEY_RIGHT:
-                window_group.cursor_x = min(window_group.cursor_x + 1, len(window_group.focus_win().content))
-            else: # input characters
-                window_group.focus_win().content = window_group.focus_win().content[:window_group.cursor_x] + chr(key) + window_group.focus_win().content[window_group.cursor_x:]
-                window_group.cursor_x += 1
+            else:
+                win = window_group.focus_win()
+                if key == curses.KEY_BACKSPACE or key == 127:
+                    win.content = win.content[:win.cursor_x - 1] + win.content[win.cursor_x:]
+                    win.cursor_x = max(win.cursor_x - 1, 0)
+                elif key == curses.KEY_LEFT:
+                    win.cursor_x = max(win.cursor_x - 1, 0)
+                elif key == curses.KEY_RIGHT:
+                    win.cursor_x = min(win.cursor_x + 1, len(win.content))
+                else: # input characters
+                    win.content = win.content[:win.cursor_x] + chr(key) + win.content[win.cursor_x:]
+                    win.cursor_x += 1
 
             window_group.update_cursor()
 
@@ -256,7 +263,7 @@ Tab:        Switch relation"""
                 frame_relation_control.next_relation()
             
             elif key == curses.KEY_BACKSPACE or key == 127:
-                window_group.update_windows_focus(hierarchy=False)
+                window_group.quit_hier_focus()
         
         # Refresh windows display
         win_logo.update_content()
