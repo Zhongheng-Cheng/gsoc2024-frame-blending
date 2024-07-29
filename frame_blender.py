@@ -52,87 +52,81 @@ class Window():
         return
 
 class WindowGroup():
-    def __init__(self, wins={}):
-        self.focus_index = 0
-        self.win_frames = wins
-        self.win_hier = None
-        self.update_windows_focus()
-        self.frame_input_count = 0
+    def __init__(self):
+        self.focus_index = [0, 0]
+        self.wins = [
+            [], # frame input windows
+            [], # hierarchy windows
+        ]
         self.cursor_x = 0
         return
     
-    def add(self, win):
-        self.win_frames[win.title] = win
+    def add(self, win, column=0):
+        self.wins[column].append(win)
         self.update_windows_focus()
         return
     
     def add_frame_input(self, start_y, start_x):
-        self.frame_input_count += 1
-        title = f"Frame {self.frame_input_count}"
+        title = f"Frame {len(self.wins[0]) + 1}"
         win_input = Window(title, start_y, start_x, ncols=20)
-        win_input.frame = ""
         self.add(win_input)
         return
     
     def add_frame_hierarchy(self, frame_relation_control):
         title = frame_relation_control.hierarchy_title()
-        content = str(frame_relation_control.hierarchy_root().find(self.focus_win().frame))
-        win = Window(title, 0, self.win_frames["Frame 1"].end_yx()[1], nlines=stdscr_height-2, content=content)
-        self.win_hier = win
+        content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content))
+        win = Window(title, 0, self.wins[0][0].end_yx()[1], nlines=stdscr_height-2, content=content)
+        self.wins[1].append(win)
         return
 
     def remove_frame_input(self):
-        if self.frame_input_count > 1:
-            title = f"Frame {self.frame_input_count}"
-            self.win_frames[title].win.clear()
-            self.win_frames[title].win.refresh()
-            del self.win_frames[title]
-            self.frame_input_count -= 1
+        if len(self.wins[0]) > 1:
+            self.wins[0][-1].win.clear()
+            self.wins[0][-1].win.refresh()
+            del self.wins[0][-1]
         return
     
     def remove_frame_hierarchy(self):
-        win = self.win_hier
+        win = self.win[1][0]
         win.win.clear()
         win.win.refresh()
-        del win
-        self.win_hier = None
+        del self.wins[1][0]
         return
     
     def update_windows_focus(self):
-        for i, win in enumerate(self.win_frames.values()):
-            if i == self.focus_index:
-                win.update_focus(True)
-                self.cursor_x = len(win.frame)
-            else:
+        for col in self.wins:
+            for win in col:
                 win.update_focus(False)
+        focus = self.focus_win()
+        focus.update_focus(True)
+        self.cursor_x = len(focus.content)
         return
     
     def next_focus(self):
-        self.focus_index = (self.focus_index + 1) % len(self.win_frames)
+        self.focus_index[1] = (self.focus_index[1] + 1) % len(self.wins[0])
         self.update_windows_focus()
         return
     
     def prev_focus(self):
-        self.focus_index = (self.focus_index - 1 + len(self.win_frames)) % len(self.win_frames)
+        self.focus_index[1] = (self.focus_index[1] - 1 + len(self.wins[0])) % len(self.wins[0])
         self.update_windows_focus()
         return
     
     def enter_hier_focus(self):
         curses.curs_set(0)
-        self.focus_index = -1
-        self.win_hier.update_focus(True)
+        self.focus_index = [1, 0]
         self.update_windows_focus()
         return
 
     def quit_hier_focus(self):
         pass
     
-    def focus_win(self):
+    def focus_win(self) -> Window:
         """
         Return the current focused window.
         """
-        title = list(self.win_frames.keys())[self.focus_index]
-        win = self.win_frames[title]
+        col, i = self.focus_index
+        win = self.wins[col][i]
         return win
     
     def update_cursor(self):
@@ -214,7 +208,7 @@ Tab:        Switch relation"""
             break
         
         # When focus on frame input windows
-        elif window_group.focus_win() in window_group.win_frames.values():
+        elif window_group.focus_index[0] == 0:
             
             # Switch frame
             if key == curses.KEY_DOWN:
@@ -224,7 +218,7 @@ Tab:        Switch relation"""
 
             # Add/remove frame
             elif key == ord('+'):
-                window_group.add_frame_input(window_group.frame_input_count * 4, win_key.end_yx()[1])
+                window_group.add_frame_input(len(window_group.wins[0]) * 4, win_key.end_yx()[1])
             elif key == ord('-'):
                 window_group.remove_frame_input()
             
@@ -235,31 +229,27 @@ Tab:        Switch relation"""
 
             # Text operations
             elif key == curses.KEY_BACKSPACE or key == 127:
-                window_group.focus_win().frame = window_group.focus_win().frame[:window_group.cursor_x - 1] + window_group.focus_win().frame[window_group.cursor_x:]
+                window_group.focus_win().content = window_group.focus_win().content[:window_group.cursor_x - 1] + window_group.focus_win().content[window_group.cursor_x:]
                 window_group.cursor_x = max(window_group.cursor_x - 1, 0)
             elif key == curses.KEY_LEFT:
                 window_group.cursor_x = max(window_group.cursor_x - 1, 0)
             elif key == curses.KEY_RIGHT:
-                window_group.cursor_x = min(window_group.cursor_x + 1, len(window_group.focus_win().frame))
+                window_group.cursor_x = min(window_group.cursor_x + 1, len(window_group.focus_win().content))
             else: # input characters
-                window_group.focus_win().frame = window_group.focus_win().frame[:window_group.cursor_x] + chr(key) + window_group.focus_win().frame[window_group.cursor_x:]
+                window_group.focus_win().content = window_group.focus_win().content[:window_group.cursor_x] + chr(key) + window_group.focus_win().content[window_group.cursor_x:]
                 window_group.cursor_x += 1
 
-            # Update windows display
             window_group.update_cursor()
-            if window_group.win_hier:
+
+            if window_group.wins[1]:
                 window_group.remove_frame_hierarchy()
-
-            win_logo.update_content()
-
-            hierarchy = frame_relation_control.hierarchy_root().find(window_group.focus_win().frame)
+            hierarchy = frame_relation_control.hierarchy_root().find(window_group.focus_win().content)
             if hierarchy:
                 window_group.add_frame_hierarchy(frame_relation_control)
-
-            window_group.focus_win().update_content(window_group.focus_win().frame)
+            
         
         # When focus on hierarchy window
-        elif window_group.focus_win() == window_group.win_hier:
+        elif window_group.focus_index[0] == 1:
 
             # Switch Frame Hierarchy
             if key == ord('\t') or key == 9: # TAB
@@ -268,7 +258,9 @@ Tab:        Switch relation"""
             elif key == curses.KEY_BACKSPACE or key == 127:
                 window_group.update_windows_focus(hierarchy=False)
         
-        # stdscr.refresh()
+        # Refresh windows display
+        win_logo.update_content()
+        window_group.focus_win().update_content()
     
     return
 
