@@ -191,8 +191,8 @@ class FrameRelationGroup():
         self.index = 0
         self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
         for relation in self.relations:
-            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation)
-            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True)
+            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
+            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
         return
     
     def hierarchy_title(self):
@@ -332,6 +332,13 @@ Tab:        Switch relation"""
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--encoding', type=str, default='utf-8', help='Specify the encoding')
+    args = parser.parse_args()
+    encoding = args.encoding
+
     curses.initscr()
     curses.start_color()
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)

@@ -17,13 +17,15 @@ class FrameNode(object):
     Represents a node in a frame hierarchy. Each node corresponds to a frame.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, encoding: str = "utf-8"):
         """
         Initializes the FrameNode with a specified name.
         :param name: Name of the frame.
         """
         self.name = name
         self.next = {}
+        assert encoding in ["utf-8", "ascii"]
+        self.encoding = encoding
         return
     
     def __str__(self):
@@ -50,12 +52,18 @@ class FrameNode(object):
         if is_head:
             result = self.name + '\n'
         else:
-            result = prefix + ("└── " if is_tail else "├── ") + self.name + '\n'
+            if self.encoding == "utf-8":
+                result = prefix + ("└── " if is_tail else "├── ") + self.name + '\n'
+            else:
+                result = prefix + ("+-- " if is_tail else "+-- ") + self.name + '\n'
         for i, node in enumerate(self._sorted_next_list()):
             if is_head:
                 new_prefix = prefix
             else:
-                new_prefix = prefix + ("    " if is_tail else "│   ")
+                if self.encoding == "utf-8":
+                    new_prefix = prefix + ("    " if is_tail else "│   ")
+                else:
+                    new_prefix = prefix + ("    " if is_tail else "|   ")
             result += node._str_helper(False, new_prefix, i == len(self.next) - 1)
         return result
     
@@ -110,7 +118,7 @@ class RootFrameNode(FrameNode):
             self.next[node.name] = node
         else:
             for parent in parents:
-                parent_node = FrameNode(name=parent)
+                parent_node = FrameNode(name=parent, encoding=self.encoding)
                 parent_node.next[node.name] = node
                 self.next[parent_node.name] = parent_node
             if node in self.next.values():
@@ -120,7 +128,12 @@ class RootFrameNode(FrameNode):
 def get_frames(foldername, suffix=".xml"):
     return [file[:-4] for file in os.listdir(foldername) if file[-4:] == suffix]
 
-def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=False):
+def analyze_hierarchy(
+        frames: list, 
+        frame_relation: str, 
+        reverse_order: bool = False, 
+        encoding: str = "utf-8"
+    ):
     """
     Analyzes and builds the frame hierarchy based on the specified relation.
     :param frames: List of frame names to include in the hierarchy.
@@ -130,7 +143,7 @@ def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=Fal
     :return: Root node of the constructed hierarchy.
     """
     assert frame_relation in frame_relations, f'''Please enter one of the relations: ['{"', '".join(frame_relations.keys())}']'''
-    root = RootFrameNode(f"[{frame_relations[frame_relation][1 if not reverse_order else 0]}]")
+    root = RootFrameNode(f"[{frame_relations[frame_relation][1 if not reverse_order else 0]}]", encoding=encoding)
     for frame in frames:
         is_node_existing = False
         
@@ -142,7 +155,7 @@ def analyze_hierarchy(frames: list, frame_relation: str, reverse_order: bool=Fal
             node = root.next[frame_name]
             is_node_existing = True
         else:
-            node = FrameNode(data_dict.get("frame_name").strip())
+            node = FrameNode(data_dict.get("frame_name").strip(), encoding=encoding)
         parents = data_dict.get("fr_rel").get(frame_relations[frame_relation][0 if not reverse_order else 1])
         parents = [parent.strip() for parent in parents.split(', ')] if parents else []
 
