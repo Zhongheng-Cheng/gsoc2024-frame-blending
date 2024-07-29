@@ -274,6 +274,10 @@ Tab:        Switch relation"""
                 window_group.add_frame_input(len(window_group.wins[0]) * 4, win_key.end_yx()[1])
             elif key == ord('-'):
                 window_group.remove_frame_input()
+
+            # Switch Frame Hierarchy
+            elif key == ord('\t') or key == 9: # TAB
+                frame_relation_control.next_relation()
             
             # Enter frame Hierarchy
             elif key == ord('\n'):
@@ -307,12 +311,8 @@ Tab:        Switch relation"""
         # When focus on hierarchy window
         elif window_group.focus_index[0] == 1:
 
-            # Switch Frame Hierarchy
-            if key == ord('\t') or key == 9: # TAB
-                frame_relation_control.next_relation()
-            
             # Quit frame hierarchy
-            elif key == curses.KEY_BACKSPACE or key == 127:
+            if key == curses.KEY_BACKSPACE or key == 127:
                 window_group.quit_hier_focus()
             
             # Switch frame
