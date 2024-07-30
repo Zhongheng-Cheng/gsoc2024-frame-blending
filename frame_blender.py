@@ -1,4 +1,5 @@
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
+from prompts import prompt_zero_shot_blending
 import curses
 import threading
 import os, sys
@@ -48,7 +49,7 @@ class Window():
         self.win.clear()
         self.win.border()
         self.update_focus(self.focus)
-        lines = content.split('\n')
+        lines = content.replace('\t', '    ').split('\n')
         for i in range(min(self.nlines, len(lines))):
             if self.center:
                 start_col = (self.ncols - min(len(lines[i]), self.ncols)) // 2 + 1
@@ -116,6 +117,7 @@ class WindowGroup():
         self.wins = [
             [], # frame input windows
             [], # hierarchy windows
+            [], # blending result windows
         ]
         return
     
@@ -136,6 +138,17 @@ class WindowGroup():
         win = HierarchyWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
         return
+    
+    def add_blending_result(self, text):
+        if self.wins[1]:
+            self.remove_frame_hierarchy()
+        if self.wins[2]:
+            win = self.wins[2][0]
+            win.win.clear()
+            win.win.refresh()
+        win = Window("Blending Result", 0, self.wins[0][0].end_yx()[1], content=text)
+        self.wins[2].append(win)
+        return win
 
     def remove_frame_input(self):
         if len(self.wins[0]) > 1:
@@ -234,9 +247,10 @@ def main(stdscr):
     global stdscr_height, stdscr_width
 
     def load_packages():
+        global query_engine, generate_response
         try:
             from rag import get_query_engine, generate_response
-            # query_engine = get_query_engine()
+            query_engine = get_query_engine()
             return "Finished"
         except Exception as e:
             return "Failed"
@@ -329,6 +343,17 @@ Tab:        Switch relation"""
                     window_group.enter_hier_focus()
                     continue
             
+            # Generate frame blending example
+            elif key == ord("/"):
+                confirmed_frames = [win.content for win in window_group.wins[0] if win.confirmed]
+                window_group.add_blending_result(f"Generating frame blending example between frames: \n{"\n".join(confirmed_frames)}")
+                prompt = prompt_zero_shot_blending(confirmed_frames)
+                if win_query_engine.content == "Finished":
+                    response = generate_response(query_engine, prompt, display=False)
+                else:
+                    response = "Query engine is not ready!"
+                window_group.add_blending_result(response)
+
             # Cancel frame confirmation
             elif window_group.focus_win().confirmed == True:
                 if key == curses.KEY_BACKSPACE or key == 127:
