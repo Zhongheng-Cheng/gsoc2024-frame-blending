@@ -1,4 +1,5 @@
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
+from rag import get_query_engine, generate_response
 import curses
 
 class Window():
@@ -267,6 +268,8 @@ Enter:      Confirm frame
 Tab:        Switch relation"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
 
+    win_hier_relation = Window("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols)
+
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
     window_group.update_cursor()
@@ -275,6 +278,7 @@ Tab:        Switch relation"""
 
         # Refresh windows display
         win_logo.update_content()
+        win_hier_relation.update_content(frame_relation_control.hierarchy_title())
         window_group.focus_win().update_content()
         
         key = stdscr.getch()
@@ -312,7 +316,6 @@ Tab:        Switch relation"""
             elif window_group.focus_win().confirmed == True:
                 if key == curses.KEY_BACKSPACE or key == 127:
                     window_group.focus_win().confirmed = False
-                    
 
             # Text operations
             else:
