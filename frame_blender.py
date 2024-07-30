@@ -39,7 +39,7 @@ class Window():
         self.win.refresh()
         return
     
-    def update_content(self, content: str = ""):
+    def update_content(self, content: str = "", attr=0):
         if not content:
             content = self.content
         else:
@@ -49,7 +49,7 @@ class Window():
         self.update_focus(self.focus)
         lines = content.split('\n')
         for i in range(min(self.nlines, len(lines))):
-            self.win.addstr(i + 1, 1, lines[i][:self.ncols])
+            self.win.addstr(i + 1, 1, lines[i][:self.ncols], attr)
         self.win.refresh()
         return
 
@@ -242,14 +242,17 @@ def main(stdscr):
     def load_packages():
         try:
             from rag import get_query_engine, generate_response
-            query_engine = get_query_engine()
+            # query_engine = get_query_engine()
             return "Finished"
         except Exception as e:
             return "Failed"
 
     def background_loading(window):
         text = load_packages()
-        window.update_content(text)
+        if text == "Finished":
+            window.update_content(text, curses.color_pair(3))
+        elif text == "Failed":
+            window.update_content(text, curses.color_pair(4))
         window_group.update_cursor()
 
 
@@ -398,6 +401,8 @@ if __name__ == "__main__":
     curses.start_color()
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
 
     # Save original stdout and stderr
     original_stdout = sys.stdout
