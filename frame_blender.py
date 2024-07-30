@@ -4,12 +4,13 @@ import threading
 import os, sys
 
 class Window():
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
+    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content='', center=False):
         self.title = title
         self.content = content
         self.begin_y = begin_y
         self.begin_x = begin_x
         self.start_line = 0
+        self.center = center
         lines = content.split('\n')
         if nlines:
             self.nlines = nlines
@@ -49,7 +50,11 @@ class Window():
         self.update_focus(self.focus)
         lines = content.split('\n')
         for i in range(min(self.nlines, len(lines))):
-            self.win.addstr(i + 1, 1, lines[i][:self.ncols], attr)
+            if self.center:
+                start_col = (self.ncols - min(len(lines[i]), self.ncols)) // 2 + 1
+            else:
+                start_col = 1
+            self.win.addstr(i + 1, start_col, lines[i][:self.ncols], attr)
         self.win.refresh()
         return
 
@@ -62,18 +67,7 @@ class FrameInputWindow(Window):
         return        
 
     def update_content(self, content: str = ""):
-        if not content:
-            content = self.content
-        else:
-            self.content = content
-        self.win.clear()
-        self.win.border()
-        self.update_focus(self.focus)
-        if self.confirmed:
-            self.win.addstr(1, 1, self.content, curses.color_pair(2))
-        else:
-            self.win.addstr(1, 1, self.content)
-        self.win.refresh()
+        super().update_content(content, attr = self.confirmed * curses.color_pair(2))
         return
     
 
@@ -286,9 +280,9 @@ Enter:      Confirm frame
 Tab:        Switch relation"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
 
-    win_hier_relation = Window("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols)
+    win_hier_relation = Window("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, center=True)
 
-    win_query_engine = Window("Query Engine", win_hier_relation.end_yx()[0], 0, ncols=win_key.ncols, content="Loading")
+    win_query_engine = Window("Query Engine", win_hier_relation.end_yx()[0], 0, ncols=win_key.ncols, content="Loading", center=True)
 
     loading_thread = threading.Thread(target=background_loading, args=(win_query_engine,))
     loading_thread.start()
