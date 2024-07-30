@@ -1,5 +1,4 @@
-from rag import get_query_engine, generate_response, cot_multi_conversation
-from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
+
 
 one_shot_example = '''Here is an example of frame blending analysis, you should follow this analyzing process while generating, but not use this example:
 # Expression
@@ -159,10 +158,12 @@ Please follow these steps to provide a detailed and clear explanation.
 def prompt_close_to(frame):
     return f"What frames are close to '{frame}'?"
 
-def prompt_zero_shot_blending(frame1, frame2):
-    return f"""Create a frame blending example between "{frame1}" frame and "{frame2}" frame. Prefer to use rhetorical devices such as Analogy and Metaphor."""
+def prompt_zero_shot_blending(frames: list[str] = []):
+    return f"""Create a frame blending example sentence between frames: "{'", "'.join(frames)}". Prefer to use rhetorical devices such as Analogy and Metaphor."""
 
 if __name__ == "__main__":
+    from rag import get_query_engine, generate_response
+    from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
     query_engine = get_query_engine()
     response = generate_response(query_engine, prompt_zero_shot_blending("Political_locales", "Birth_scenario"))
     # response = generate_response(query_engine, prompt_close_to("murder"))

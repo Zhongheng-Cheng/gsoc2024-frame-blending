@@ -1,13 +1,17 @@
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
+from prompts import prompt_zero_shot_blending
 import curses
+import threading
+import os, sys
 
 class Window():
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
+    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content='', center=False):
         self.title = title
         self.content = content
         self.begin_y = begin_y
         self.begin_x = begin_x
         self.start_line = 0
+        self.center = center
         lines = content.split('\n')
         if nlines:
             self.nlines = nlines
@@ -37,7 +41,7 @@ class Window():
         self.win.refresh()
         return
     
-    def update_content(self, content: str = ""):
+    def update_content(self, content: str = "", attr=0):
         if not content:
             content = self.content
         else:
@@ -45,18 +49,35 @@ class Window():
         self.win.clear()
         self.win.border()
         self.update_focus(self.focus)
-        lines = content.split('\n')
+        lines = content.replace('\t', '    ').split('\n')
         for i in range(min(self.nlines, len(lines))):
-            self.win.addstr(i + 1, 1, lines[i][:self.ncols])
+            if self.center:
+                start_col = (self.ncols - min(len(lines[i]), self.ncols)) // 2 + 1
+            else:
+                start_col = 1
+            self.win.addstr(i + 1, start_col, lines[i][:self.ncols], attr)
         self.win.refresh()
         return
+
+
+class FrameInputWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
+        self.cursor_x = 0
+        self.confirmed = False
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
+        return        
+
+    def update_content(self, content: str = ""):
+        super().update_content(content, attr = self.confirmed * curses.color_pair(2))
+        return
     
+
 class HierarchyWindow(Window):
     def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         self.start_line = 0
         self.focus_line_index = 0
         self.selected_frame = ''
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         return
     
     def update_content(self, content: str = ""):
@@ -96,6 +117,7 @@ class WindowGroup():
         self.wins = [
             [], # frame input windows
             [], # hierarchy windows
+            [], # blending result windows
         ]
         return
     
@@ -106,8 +128,7 @@ class WindowGroup():
     
     def add_frame_input(self, start_y, start_x):
         title = f"Frame {len(self.wins[0]) + 1}"
-        win_input = Window(title, start_y, start_x, ncols=20)
-        win_input.cursor_x = 0
+        win_input = FrameInputWindow(title, start_y, start_x, ncols=20)
         self.add(win_input)
         return
     
@@ -117,6 +138,17 @@ class WindowGroup():
         win = HierarchyWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
         return
+    
+    def add_blending_result(self, text):
+        if self.wins[1]:
+            self.remove_frame_hierarchy()
+        if self.wins[2]:
+            win = self.wins[2][0]
+            win.win.clear()
+            win.win.refresh()
+        win = Window("Blending Result", 0, self.wins[0][0].end_yx()[1], content=text)
+        self.wins[2].append(win)
+        return win
 
     def remove_frame_input(self):
         if len(self.wins[0]) > 1:
@@ -214,6 +246,24 @@ class FrameRelationGroup():
 def main(stdscr):
     global stdscr_height, stdscr_width
 
+    def load_packages():
+        global query_engine, generate_response
+        try:
+            from rag import get_query_engine, generate_response
+            query_engine = get_query_engine()
+            return "Finished"
+        except Exception as e:
+            return "Failed"
+
+    def background_loading(window):
+        text = load_packages()
+        if text == "Finished":
+            window.update_content(text, curses.color_pair(3))
+        elif text == "Failed":
+            window.update_content(text, curses.color_pair(4))
+        window_group.update_cursor()
+
+
     foldername = "frame"
     frames = get_frames(foldername)
     frame_relation_control = FrameRelationGroup(frames)
@@ -244,6 +294,13 @@ Enter:      Confirm frame
 Tab:        Switch relation"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
 
+    win_hier_relation = Window("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, center=True)
+
+    win_query_engine = Window("Query Engine", win_hier_relation.end_yx()[0], 0, ncols=win_key.ncols, content="Loading", center=True)
+
+    loading_thread = threading.Thread(target=background_loading, args=(win_query_engine,))
+    loading_thread.start()
+
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
     window_group.update_cursor()
@@ -252,6 +309,7 @@ Tab:        Switch relation"""
 
         # Refresh windows display
         win_logo.update_content()
+        win_hier_relation.update_content(frame_relation_control.hierarchy_title())
         window_group.focus_win().update_content()
         
         key = stdscr.getch()
@@ -284,6 +342,22 @@ Tab:        Switch relation"""
                 if window_group.focus_win().content and window_group.wins[1]:
                     window_group.enter_hier_focus()
                     continue
+            
+            # Generate frame blending example
+            elif key == ord("/"):
+                confirmed_frames = [win.content for win in window_group.wins[0] if win.confirmed]
+                window_group.add_blending_result(f"Generating frame blending example between frames: \n{"\n".join(confirmed_frames)}")
+                prompt = prompt_zero_shot_blending(confirmed_frames)
+                if win_query_engine.content == "Finished":
+                    response = generate_response(query_engine, prompt, display=False)
+                else:
+                    response = "Query engine is not ready!"
+                window_group.add_blending_result(response)
+
+            # Cancel frame confirmation
+            elif window_group.focus_win().confirmed == True:
+                if key == curses.KEY_BACKSPACE or key == 127:
+                    window_group.focus_win().confirmed = False
 
             # Text operations
             else:
@@ -303,9 +377,11 @@ Tab:        Switch relation"""
 
             if window_group.wins[1]:
                 window_group.remove_frame_hierarchy()
-            hierarchy = frame_relation_control.hierarchy_root().find(window_group.focus_win().content)
-            if hierarchy:
-                window_group.add_frame_hierarchy(frame_relation_control)
+            win = window_group.focus_win()
+            if not win.confirmed:
+                hierarchy = frame_relation_control.hierarchy_root().find(win.content)
+                if hierarchy:
+                    window_group.add_frame_hierarchy(frame_relation_control)
             
         
         # When focus on hierarchy window
@@ -327,6 +403,7 @@ Tab:        Switch relation"""
                 window_group.quit_hier_focus()
                 window_group.remove_frame_hierarchy()
                 window_group.focus_win().update_content(frame)
+                window_group.focus_win().confirmed = True
         
     return
 
@@ -343,4 +420,20 @@ if __name__ == "__main__":
     curses.start_color()
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
-    curses.wrapper(main)
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+
+    # Save original stdout and stderr
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    
+    # Redirect stdout and stderr to os.devnull to suppress output
+    sys.stdout = open(os.devnull, 'w')
+    sys.stderr = open(os.devnull, 'w')
+    
+    try:
+        curses.wrapper(main)
+    finally:
+        # Restore original stdout and stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
