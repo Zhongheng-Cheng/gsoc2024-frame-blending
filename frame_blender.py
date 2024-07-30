@@ -50,13 +50,37 @@ class Window():
             self.win.addstr(i + 1, 1, lines[i][:self.ncols])
         self.win.refresh()
         return
+
+
+class FrameInputWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
+        self.cursor_x = 0
+        self.confirmed = False
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
+        return        
+
+    def update_content(self, content: str = ""):
+        if not content:
+            content = self.content
+        else:
+            self.content = content
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
+        if self.confirmed:
+            self.win.addstr(1, 1, self.content, curses.color_pair(2))
+        else:
+            self.win.addstr(1, 1, self.content)
+        self.win.refresh()
+        return
     
+
 class HierarchyWindow(Window):
     def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         self.start_line = 0
         self.focus_line_index = 0
         self.selected_frame = ''
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         return
     
     def update_content(self, content: str = ""):
@@ -106,8 +130,7 @@ class WindowGroup():
     
     def add_frame_input(self, start_y, start_x):
         title = f"Frame {len(self.wins[0]) + 1}"
-        win_input = Window(title, start_y, start_x, ncols=20)
-        win_input.cursor_x = 0
+        win_input = FrameInputWindow(title, start_y, start_x, ncols=20)
         self.add(win_input)
         return
     
@@ -284,6 +307,12 @@ Tab:        Switch relation"""
                 if window_group.focus_win().content and window_group.wins[1]:
                     window_group.enter_hier_focus()
                     continue
+            
+            # Cancel frame confirmation
+            elif window_group.focus_win().confirmed == True:
+                if key == curses.KEY_BACKSPACE or key == 127:
+                    window_group.focus_win().confirmed = False
+                    
 
             # Text operations
             else:
@@ -303,9 +332,11 @@ Tab:        Switch relation"""
 
             if window_group.wins[1]:
                 window_group.remove_frame_hierarchy()
-            hierarchy = frame_relation_control.hierarchy_root().find(window_group.focus_win().content)
-            if hierarchy:
-                window_group.add_frame_hierarchy(frame_relation_control)
+            win = window_group.focus_win()
+            if not win.confirmed:
+                hierarchy = frame_relation_control.hierarchy_root().find(win.content)
+                if hierarchy:
+                    window_group.add_frame_hierarchy(frame_relation_control)
             
         
         # When focus on hierarchy window
@@ -327,6 +358,7 @@ Tab:        Switch relation"""
                 window_group.quit_hier_focus()
                 window_group.remove_frame_hierarchy()
                 window_group.focus_win().update_content(frame)
+                window_group.focus_win().confirmed = True
         
     return
 
