@@ -1,6 +1,7 @@
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
-from rag import get_query_engine, generate_response
 import curses
+import threading
+import os, sys
 
 class Window():
     def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
@@ -238,6 +239,20 @@ class FrameRelationGroup():
 def main(stdscr):
     global stdscr_height, stdscr_width
 
+    def load_packages():
+        try:
+            from rag import get_query_engine, generate_response
+            query_engine = get_query_engine()
+            return "Finished"
+        except Exception as e:
+            return "Failed"
+
+    def background_loading(window):
+        text = load_packages()
+        window.update_content(text)
+        window_group.update_cursor()
+
+
     foldername = "frame"
     frames = get_frames(foldername)
     frame_relation_control = FrameRelationGroup(frames)
@@ -269,6 +284,11 @@ Tab:        Switch relation"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
 
     win_hier_relation = Window("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols)
+
+    win_query_engine = Window("Query Engine", win_hier_relation.end_yx()[0], 0, ncols=win_key.ncols, content="Loading")
+
+    loading_thread = threading.Thread(target=background_loading, args=(win_query_engine,))
+    loading_thread.start()
 
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
@@ -378,4 +398,18 @@ if __name__ == "__main__":
     curses.start_color()
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
-    curses.wrapper(main)
+
+    # Save original stdout and stderr
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    
+    # Redirect stdout and stderr to os.devnull to suppress output
+    sys.stdout = open(os.devnull, 'w')
+    sys.stderr = open(os.devnull, 'w')
+    
+    try:
+        curses.wrapper(main)
+    finally:
+        # Restore original stdout and stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
