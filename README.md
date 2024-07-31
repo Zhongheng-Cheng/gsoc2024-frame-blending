@@ -9,6 +9,7 @@ My personal progress blog can be found [here](https://zhongheng-cheng.github.io/
 ## Table of Contents
 
 - [Installation](#installation)
+- [Frame Blender](#frame-blender)
 - [Frame Hierarchy Analyzer](#frame-hierarchy-analyzer)
 - [FrameNet XML Parser](#framenet-xml-parser)
 - [RAG for Llama2 (Huggingface)](#rag-for-llama2-huggingface)
@@ -39,6 +40,33 @@ pip install -r requirements.txt
 touch .env
 # Enter your Huggingface API key in ".env" like this:
 # HUGGINGFACE_API_KEY="..."
+```
+
+## Frame Blender
+
+### Introduction
+
+This is a terminal application built for CWRU HPC for generating frame blending examples. Users can enter multiple frames, select their hierarchically related frames, and generate frame blending results with options including zero/one/few-shot, CoT and rhetorical devices.
+
+### Prerequisites
+
+1. Basic installation mentioned in [Installation](#installation)
+2. Setup FrameNet dataset
+    - Copy the FrameNet dataset folder `frame/` to the work directory.
+    - Create JSON-format FrameNet dataset folder `frame_json/` using [FrameNet XML Parser](#framenet-xml-parser).
+    
+    ```bash
+    python framenet_xml_parser.py
+    ```
+3. Request a GPU node on CWRU HPC
+
+### Usage
+
+```bash
+./frame_blender # run the frame_blender
+
+# If the box-drawing characters do not display well on HPC terminal
+./frame_blender --encoding=ascii # replace the box-drawing characters with ASCII characters
 ```
 
 ## Frame Hierarchy Analyzer
