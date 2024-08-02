@@ -47,7 +47,7 @@ def generate_response(query_engine, prompt, display=True):
         print(prompt)
         print("\n**_response_**\n")
         print(response)
-    return response
+    return str(response)
 
 
 def multi_conversation(query_engine):
