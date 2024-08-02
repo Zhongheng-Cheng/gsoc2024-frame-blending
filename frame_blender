@@ -311,7 +311,9 @@ Arrow
  up/down:   Switch frame
 Enter:      Confirm frame
           & Enter hierarchy
-Tab:        Switch relation"""
+Tab:        Switch relation
+/:          Blend with
+            confirmed frames"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
 
     win_hier_relation = Window("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, center=True)
