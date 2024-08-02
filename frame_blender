@@ -111,6 +111,24 @@ class HierarchyWindow(Window):
         self.focus_line_index = max(self.focus_line_index - 1, 0)
         self.start_line = min(self.focus_line_index, self.start_line)
         return
+    
+
+class ResultWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, maxcols=100, content=''):
+        super().__init__(title, begin_y, begin_x, nlines, ncols=None, content=self.split_lines(content, maxcols))
+        return    
+    
+    def split_lines(self, content, maxcols):
+        lines_tmp = content.replace('\t', '    ').split('\n')
+        lines = []
+        while lines_tmp:
+            if not lines_tmp[0]:
+                lines_tmp.pop(0)
+                lines[-1] += '\n'
+                continue
+            lines.append(lines_tmp[0][:maxcols])
+            lines_tmp[0] = lines_tmp[0][maxcols:]
+        return '\n'.join(lines)
 
 
 class WindowGroup():
@@ -141,14 +159,14 @@ class WindowGroup():
         self.wins[1].append(win)
         return
     
-    def add_blending_result(self, text):
+    def add_blending_result(self, maxcols, text):
         if self.wins[1]:
             self.remove_frame_hierarchy()
         if self.wins[2]:
             win = self.wins[2][0]
             win.win.clear()
             win.win.refresh()
-        win = Window("Blending Result", 0, self.wins[0][0].end_yx()[1], content=text)
+        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], maxcols=maxcols, content=text)
         self.wins[2].append(win)
         return win
 
@@ -347,14 +365,22 @@ Tab:        Switch relation"""
             
             # Generate frame blending example
             elif key == ord("/"):
+                maxcols = stdscr_width - window_group.wins[0][0].end_yx()[1] - 2
                 confirmed_frames = [win.content for win in window_group.wins[0] if win.confirmed]
-                window_group.add_blending_result(f"Generating frame blending example between frames: \n{"\n".join(confirmed_frames)}")
+                window_group.add_blending_result(
+                    maxcols = maxcols,
+                    text = "Generating frame blending example between frames: \n" + "\n".join(confirmed_frames)
+                )
                 prompt = prompt_zero_shot_blending(confirmed_frames)
                 if win_query_engine.content == "Finished":
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
-                window_group.add_blending_result(response)
+                window_group.add_blending_result(
+                    maxcols = maxcols,
+                    text = response
+                )
+                continue
 
             # Cancel frame confirmation
             elif window_group.focus_win().confirmed == True:
