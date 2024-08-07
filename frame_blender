@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
-from prompts import prompt_zero_shot_blending
+from prompts import Prompts
 import curses
 import threading
 import os, sys
@@ -290,6 +290,8 @@ def main(stdscr):
     stdscr.clear()
     stdscr.refresh()
 
+    prompts = Prompts()
+
     win_logo_content = r"""
     ______                             ____  __               __         
    / ____/________ _____ ___  ___     / __ )/ /__  ____  ____/ /__  _____
@@ -373,11 +375,12 @@ Tab:        Switch relation
                     maxcols = maxcols,
                     text = "Generating frame blending example between frames: \n" + "\n".join(confirmed_frames)
                 )
-                prompt = prompt_zero_shot_blending(confirmed_frames)
+                prompt = prompts.zero_shot_blending(confirmed_frames)
                 if win_query_engine.content == "Finished":
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
+                # response = prompt
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
