@@ -153,7 +153,7 @@ class WindowGroup():
         return
     
     def add_frame_hierarchy(self, frame_relation_control):
-        title = frame_relation_control.hierarchy_title()
+        title = frame_relation_control.now()
         content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content)).strip()
         win = HierarchyWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
@@ -235,32 +235,43 @@ class WindowGroup():
         win.win.move(1, win.cursor_x + 1)
         win.win.refresh()
         return
+    
 
-
-class FrameRelationGroup():
-    def __init__(self, frames):
-        self.roots = {}
+class GroupCycle():
+    def __init__(self, items):
+        self.items = items
         self.index = 0
-        self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
-        for relation in self.relations:
-            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
-            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
         return
     
-    def hierarchy_title(self):
-        return list(self.roots.keys())[self.index]
+    def now(self):
+        return self.items[self.index]
     
-    def hierarchy_root(self):
-        title = self.hierarchy_title()
-        return self.roots[title]
+    def next(self):
+        self.index = (self.index + 1) % len(self.items)
+        return
     
-    def next_relation(self):
-        self.index = (self.index + 1) % len(self.roots)
+    def prev(self):
+        self.index = (self.index - 1 + len(self.items)) % len(self.items)
         return
     
     def reset_index(self):
         self.index = 0
         return
+
+
+class FrameRelationGroup(GroupCycle):
+    def __init__(self, frames):
+        self.roots = {}
+        self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
+        for relation in self.relations:
+            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
+            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
+        super().__init__(list(self.roots.keys()))
+        return
+    
+    def hierarchy_root(self):
+        title = self.now()
+        return self.roots[title]
     
 
 def main(stdscr):
@@ -333,7 +344,7 @@ Tab:        Switch relation
 
         # Refresh windows display
         win_logo.update_content()
-        win_hier_relation.update_content(frame_relation_control.hierarchy_title())
+        win_hier_relation.update_content(frame_relation_control.now())
         window_group.focus_win().update_content()
         
         key = stdscr.getch()
@@ -359,7 +370,7 @@ Tab:        Switch relation
 
             # Switch Frame Hierarchy
             elif key == ord('\t') or key == 9: # TAB
-                frame_relation_control.next_relation()
+                frame_relation_control.next()
             
             # Enter frame Hierarchy
             elif key == ord('\n'):
