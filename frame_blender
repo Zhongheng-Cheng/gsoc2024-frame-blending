@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
-from prompts import prompt_zero_shot_blending
+from prompts import Prompts
 import curses
 import threading
 import os, sys
 
 class Window():
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content='', center=False):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content='', center=False):
         self.title = title
         self.content = content
         self.begin_y = begin_y
@@ -114,8 +114,10 @@ class HierarchyWindow(Window):
     
 
 class ResultWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, maxcols=100, content=''):
-        super().__init__(title, begin_y, begin_x, nlines, ncols=None, content=self.split_lines(content, maxcols))
+    def __init__(self, title, begin_y, begin_x, nlines=1, ncols=None, content=''):
+        self.start_line = 0
+        self.content = self.split_lines(content, ncols)
+        super().__init__(title, begin_y, begin_x, nlines=nlines, ncols=ncols, content=self.content)
         return    
     
     def split_lines(self, content, maxcols):
@@ -129,6 +131,37 @@ class ResultWindow(Window):
             lines.append(lines_tmp[0][:maxcols])
             lines_tmp[0] = lines_tmp[0][maxcols:]
         return '\n'.join(lines)
+    
+    def count_lines(self):
+        return len(self.content.split('\n'))
+    
+    def scroll_down(self):
+        self.start_line = min(self.start_line + 1, self.count_lines() - self.nlines)
+        self.update_content()
+        return
+    
+    def scroll_up(self):
+        self.start_line = max(self.start_line - 1, 0)
+        self.update_content()
+        return
+    
+    def update_content(self, content: str = "", attr=0):
+        if not content:
+            content = self.content
+        else:
+            self.content = content
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
+        lines = content.replace('\t', '    ').split('\n')[self.start_line : self.start_line + self.nlines]
+        for i, line in enumerate(lines):
+            if self.center:
+                start_col = (self.ncols - min(len(line), self.ncols)) // 2 + 1
+            else:
+                start_col = 1
+            self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
+        self.win.refresh()
+        return
 
 
 class WindowGroup():
@@ -153,7 +186,7 @@ class WindowGroup():
         return
     
     def add_frame_hierarchy(self, frame_relation_control):
-        title = frame_relation_control.hierarchy_title()
+        title = frame_relation_control.now()
         content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content)).strip()
         win = HierarchyWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
@@ -163,10 +196,8 @@ class WindowGroup():
         if self.wins[1]:
             self.remove_frame_hierarchy()
         if self.wins[2]:
-            win = self.wins[2][0]
-            win.win.clear()
-            win.win.refresh()
-        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], maxcols=maxcols, content=text)
+            self.remove_blending_result()
+        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-2, maxcols, content=text)
         self.wins[2].append(win)
         return win
 
@@ -185,6 +216,13 @@ class WindowGroup():
         win.win.refresh()
         del self.wins[1][0]
         return
+    
+    def remove_blending_result(self):
+        win = self.wins[2][0]
+        win.win.clear()
+        win.win.refresh()
+        del self.wins[2][0]
+        return 
     
     def update_windows_focus(self):
         for col in self.wins:
@@ -205,15 +243,15 @@ class WindowGroup():
         self.update_windows_focus()
         return
     
-    def enter_hier_focus(self):
+    def enter_focus(self, win_index: list):
         curses.curs_set(0)
         self._tmp_focus_index = self.focus_index
-        self.focus_index = [1, 0]
+        self.focus_index = win_index
         self.update_windows_focus()
         return
 
-    def quit_hier_focus(self):
-        win = self.wins[1][0]
+    def quit_focus(self):
+        win = self.focus_win()
         win.update_focus(False)
         win.update_content()
         self.focus_index = self._tmp_focus_index
@@ -235,32 +273,43 @@ class WindowGroup():
         win.win.move(1, win.cursor_x + 1)
         win.win.refresh()
         return
+    
 
-
-class FrameRelationGroup():
-    def __init__(self, frames):
-        self.roots = {}
+class GroupCycle():
+    def __init__(self, items):
+        self.items = items
         self.index = 0
-        self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
-        for relation in self.relations:
-            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
-            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
         return
     
-    def hierarchy_title(self):
-        return list(self.roots.keys())[self.index]
+    def now(self):
+        return self.items[self.index]
     
-    def hierarchy_root(self):
-        title = self.hierarchy_title()
-        return self.roots[title]
+    def next(self):
+        self.index = (self.index + 1) % len(self.items)
+        return
     
-    def next_relation(self):
-        self.index = (self.index + 1) % len(self.roots)
+    def prev(self):
+        self.index = (self.index - 1 + len(self.items)) % len(self.items)
         return
     
     def reset_index(self):
         self.index = 0
         return
+
+
+class FrameRelationGroup(GroupCycle):
+    def __init__(self, frames):
+        self.roots = {}
+        self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
+        for relation in self.relations:
+            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
+            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
+        super().__init__(list(self.roots.keys()))
+        return
+    
+    def hierarchy_root(self):
+        title = self.now()
+        return self.roots[title]
     
 
 def main(stdscr):
@@ -289,6 +338,8 @@ def main(stdscr):
     frame_relation_control = FrameRelationGroup(frames)
     stdscr.clear()
     stdscr.refresh()
+
+    prompts = Prompts()
 
     win_logo_content = r"""
     ______                             ____  __               __         
@@ -331,7 +382,7 @@ Tab:        Switch relation
 
         # Refresh windows display
         win_logo.update_content()
-        win_hier_relation.update_content(frame_relation_control.hierarchy_title())
+        win_hier_relation.update_content(frame_relation_control.now())
         window_group.focus_win().update_content()
         
         key = stdscr.getch()
@@ -357,12 +408,12 @@ Tab:        Switch relation
 
             # Switch Frame Hierarchy
             elif key == ord('\t') or key == 9: # TAB
-                frame_relation_control.next_relation()
+                frame_relation_control.next()
             
             # Enter frame Hierarchy
             elif key == ord('\n'):
                 if window_group.focus_win().content and window_group.wins[1]:
-                    window_group.enter_hier_focus()
+                    window_group.enter_focus([1, 0])
                     continue
             
             # Generate frame blending example
@@ -373,15 +424,17 @@ Tab:        Switch relation
                     maxcols = maxcols,
                     text = "Generating frame blending example between frames: \n" + "\n".join(confirmed_frames)
                 )
-                prompt = prompt_zero_shot_blending(confirmed_frames)
+                prompt = prompts.zero_shot_blending(confirmed_frames)
                 if win_query_engine.content == "Finished":
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
+                response = prompt + '\n'.join([str(i) for i in range(20)])
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
                 )
+                window_group.enter_focus([2, 0])
                 continue
 
             # Cancel frame confirmation
@@ -419,7 +472,7 @@ Tab:        Switch relation
 
             # Quit frame hierarchy
             if key == curses.KEY_BACKSPACE or key == 127:
-                window_group.quit_hier_focus()
+                window_group.quit_focus()
             
             # Switch frame
             elif key == curses.KEY_DOWN:
@@ -430,10 +483,25 @@ Tab:        Switch relation
             # Confirm frame
             elif key == ord('\n'):
                 frame = window_group.wins[1][0].selected_frame
-                window_group.quit_hier_focus()
+                window_group.quit_focus()
                 window_group.remove_frame_hierarchy()
                 window_group.focus_win().update_content(frame)
                 window_group.focus_win().confirmed = True
+        
+        # When focus on blending result window
+        elif window_group.focus_index[0] == 2:
+
+            # Quit frame hierarchy
+            if key == curses.KEY_BACKSPACE or key == 127:
+                window_group.quit_focus()
+                window_group.remove_blending_result()
+                window_group.quit_focus()
+
+            # Scroll content
+            elif key == curses.KEY_DOWN:
+                window_group.wins[2][0].scroll_down()
+            elif key == curses.KEY_UP:
+                window_group.wins[2][0].scroll_up()
         
     return
 
