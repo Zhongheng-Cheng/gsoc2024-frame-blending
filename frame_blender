@@ -7,7 +7,7 @@ import threading
 import os, sys
 
 class Window():
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content='', center=False):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content='', center=False):
         self.title = title
         self.content = content
         self.begin_y = begin_y
@@ -114,8 +114,10 @@ class HierarchyWindow(Window):
     
 
 class ResultWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, maxcols=100, content=''):
-        super().__init__(title, begin_y, begin_x, nlines, ncols=None, content=self.split_lines(content, maxcols))
+    def __init__(self, title, begin_y, begin_x, nlines=1, ncols=None, content=''):
+        self.start_line = 0
+        self.content = self.split_lines(content, ncols)
+        super().__init__(title, begin_y, begin_x, nlines=nlines, ncols=ncols, content=self.content)
         return    
     
     def split_lines(self, content, maxcols):
@@ -129,6 +131,37 @@ class ResultWindow(Window):
             lines.append(lines_tmp[0][:maxcols])
             lines_tmp[0] = lines_tmp[0][maxcols:]
         return '\n'.join(lines)
+    
+    def count_lines(self):
+        return len(self.content.split('\n'))
+    
+    def scroll_down(self):
+        self.start_line = min(self.start_line + 1, self.count_lines() - self.nlines)
+        self.update_content()
+        return
+    
+    def scroll_up(self):
+        self.start_line = max(self.start_line - 1, 0)
+        self.update_content()
+        return
+    
+    def update_content(self, content: str = "", attr=0):
+        if not content:
+            content = self.content
+        else:
+            self.content = content
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
+        lines = content.replace('\t', '    ').split('\n')[self.start_line : self.start_line + self.nlines]
+        for i, line in enumerate(lines):
+            if self.center:
+                start_col = (self.ncols - min(len(line), self.ncols)) // 2 + 1
+            else:
+                start_col = 1
+            self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
+        self.win.refresh()
+        return
 
 
 class WindowGroup():
@@ -164,7 +197,7 @@ class WindowGroup():
             self.remove_frame_hierarchy()
         if self.wins[2]:
             self.remove_blending_result()
-        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], maxcols=maxcols, content=text)
+        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-2, maxcols, content=text)
         self.wins[2].append(win)
         return win
 
@@ -396,7 +429,7 @@ Tab:        Switch relation
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
-                response = prompt + '\n'.join([str(i) for i in range(100)])
+                response = prompt + '\n'.join([str(i) for i in range(20)])
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
@@ -463,6 +496,12 @@ Tab:        Switch relation
                 window_group.quit_focus()
                 window_group.remove_blending_result()
                 window_group.quit_focus()
+
+            # Scroll content
+            elif key == curses.KEY_DOWN:
+                window_group.wins[2][0].scroll_down()
+            elif key == curses.KEY_UP:
+                window_group.wins[2][0].scroll_up()
         
     return
 
