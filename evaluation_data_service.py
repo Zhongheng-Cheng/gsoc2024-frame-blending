@@ -9,7 +9,7 @@ if not os.path.exists(file_path):
     with open(file_path, 'w') as file:
         file.write('[]')
 
-class Evaluation():
+class EvaluationMatrix():
     def __init__(self,
                  completeness: int = 0,
                  clarity: int = 0,
@@ -54,12 +54,12 @@ class EvaluationDataService():
     def _load(self):
         fn = self._get_data_file_name()
         with open(fn, "r") as in_file:
-            self.users = json.load(in_file)
+            self.blending_results = json.load(in_file)
 
     def _save(self):
         fn = self._get_data_file_name()
         with open(fn, "w") as out_file:
-            json.dump(self.users, out_file)
+            json.dump(self.blending_results, out_file, indent=4)
 
     def get_result(self,
                    id: str = None,
@@ -79,7 +79,7 @@ class EvaluationDataService():
                       frames: list = None,
                       settings: list = None,
                       blending_result: str = None,
-                      evaluations: Evaluation = None,
+                      evaluations: EvaluationMatrix = None,
                       ):
         if id in [result["id"] for result in self.blending_results]:
             print(f"result id: {id} already exists")
@@ -95,7 +95,7 @@ class EvaluationDataService():
         return
     
     def insert_evaluation(self,
-                          evaluation: Evaluation,
+                          evaluation: EvaluationMatrix,
                           id: str = None,
                           frames: list = None,
                           settings: list = None,
