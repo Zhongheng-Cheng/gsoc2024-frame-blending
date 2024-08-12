@@ -26,6 +26,12 @@ def get_data_service():
     ds = EvaluationDataService(config)
     return ds
 
+def test_get_result():
+    ds = get_data_service()
+    result = ds.get_result(id='3')
+    print(result)
+    return
+
 @show_change
 def test_create_result():
 
@@ -56,5 +62,6 @@ def test_update():
     )
 
 if __name__ == "__main__":
+    test_get_result()
     # test_create_result()
-    test_update()
+    # test_update()
