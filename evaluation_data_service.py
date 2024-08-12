@@ -1,4 +1,13 @@
 import json
+import os
+
+file_path = "./data/evaluation.json"
+dir_name = os.path.dirname(file_path)
+if not os.path.exists(dir_name):
+    os.makedirs(dir_name)
+if not os.path.exists(file_path):
+    with open(file_path, 'w') as file:
+        file.write('[]')
 
 class Evaluation():
     def __init__(self,
