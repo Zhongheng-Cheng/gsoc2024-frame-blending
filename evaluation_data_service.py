@@ -106,3 +106,13 @@ class EvaluationDataService():
                     (settings is None or settings == result.get("settings", None))):
                 result["evaluations"].append(evaluation.to_dict())
         self._save()
+        return
+
+    def delete_result(self,
+                      id: str
+                      ):
+        for i, result in enumerate(self.blending_results):
+            if ((id == result.get("id", None))):
+                del self.blending_results[i]
+        self._save()
+        return
