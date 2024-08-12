@@ -27,7 +27,7 @@ def get_data_service():
     return ds
 
 @show_change
-def t1():
+def test_create_result():
 
     ds = get_data_service()
 
@@ -47,5 +47,14 @@ def t1():
         )
     )
 
+@show_change
+def test_update():
+    ds = get_data_service()
+    ds.insert_evaluation(
+        EvaluationMatrix(3, 3, 3, 3, 3, 3, "Just Average"),
+        id='3'
+    )
+
 if __name__ == "__main__":
-    t1()
+    # test_create_result()
+    test_update()
