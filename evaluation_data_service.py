@@ -100,7 +100,9 @@ class EvaluationDataService():
                           frames: list = None,
                           settings: list = None,
                           ):
-        target_results = self.get_result(id, frames, settings)
-        for result in target_results:
-            result["evaluations"].append(evaluation)
+        for result in self.blending_results:
+            if ((id is None or id == result.get("id", None)) and \
+                    (frames is None or frames == result.get("frames", None)) and \
+                    (settings is None or settings == result.get("settings", None))):
+                result["evaluations"].append(evaluation.to_dict())
         self._save()
