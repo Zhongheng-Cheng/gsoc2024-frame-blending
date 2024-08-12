@@ -1,6 +1,21 @@
 import json
 from evaluation_data_service import EvaluationMatrix, EvaluationDataService
 
+def show_change(func):
+    def wrapper(*args, **kwargs):
+        ds = get_data_service()
+        results = ds.get_result()
+        print("Before = ", json.dumps(results, indent=4))
+        print('===================')
+        func(*args, **kwargs)
+        print('===================')
+        ds = get_data_service()
+        results = ds.get_result()
+        print("After = ", json.dumps(results, indent=4))
+        return
+    return wrapper
+        
+
 def get_data_service():
 
     config = {
@@ -11,17 +26,13 @@ def get_data_service():
     ds = EvaluationDataService(config)
     return ds
 
+@show_change
 def t1():
 
     ds = get_data_service()
-    results = ds.get_result()
-    print("t1: results = ", json.dumps(results, indent=4))
-
-    
-    print("=================")
 
     ds.create_result(
-        id = '4',
+        id = '3',
         frames = ["Travel", "Aging"],
         settings = ["zero-shot", "rhetorical"],
         blending_result = "test result",
@@ -35,11 +46,6 @@ def t1():
             additional_notes = "It is good, too"
         )
     )
-
-    print('===================')
-    ds = get_data_service()
-    results = ds.get_result()
-    print("t1: results = ", json.dumps(results, indent=4))
 
 if __name__ == "__main__":
     t1()
