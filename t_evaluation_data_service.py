@@ -61,7 +61,15 @@ def test_update():
         id='3'
     )
 
+@show_change
+def test_delete():
+    ds = get_data_service()
+    ds.delete_result(
+        id="2"
+    )
+
 if __name__ == "__main__":
-    test_get_result()
+    # test_get_result()
     # test_create_result()
     # test_update()
+    test_delete()
