@@ -1,17 +1,18 @@
 [
     {
+        "id": "...",
         "frames": ["<frame1>", "<frame2>", "", ""],
         "settings": ["one-shot", "rhetorical"],
-        "blending result": "<blending result>",
+        "blending_result": "<blending result>",
         "evaluations": [
             {
                 "completeness": "...",
                 "clarity": "...",
                 "relevance": "...",
-                "depth of understanding": "...",
+                "depth_of_understanding": "...",
                 "coherence": "...",
-                "execute time": "...",
-                "additional notes": "..."
+                "execute_time": "...",
+                "additional_notes": "..."
             },
             {},
             {},
