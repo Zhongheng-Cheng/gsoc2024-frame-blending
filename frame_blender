@@ -204,7 +204,7 @@ class WindowGroup():
         return win
     
     def add_evaluation(self, maxcols, text):
-        eval_win = ResultWindow("Evaluation", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols, content=text)
+        eval_win = HierarchyWindow("Evaluation", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols, content=text)
         self.wins[2].append(eval_win)
 
     def remove_frame_input(self):
@@ -240,7 +240,7 @@ class WindowGroup():
         return
     
     def next_focus(self):
-        self.focus_index[1] = (self.focus_index[1] + 1) % len(self.wins[0])
+        self.focus_index[1] = (self.focus_index[1] + 1) % len(self.wins[self.focus_index[0]])
         self.update_windows_focus()
         return
     
@@ -516,9 +516,12 @@ Tab:        Switch relation
 
             # Scroll content
             elif key == curses.KEY_DOWN:
-                window_group.wins[2][0].scroll_down()
+                window_group.focus_win().scroll_down()
             elif key == curses.KEY_UP:
-                window_group.wins[2][0].scroll_up()
+                window_group.focus_win().scroll_up()
+
+            elif key == ord('\t') or key == 9: # TAB
+                window_group.next_focus()
         
     return
 
