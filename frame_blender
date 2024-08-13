@@ -99,24 +99,6 @@ class Window():
             self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
         self.win.refresh()
         return
-    
-    # def update_content(self, content: str = "", attr=0):
-    #     if not content:
-    #         content = self.content
-    #     else:
-    #         self.content = content
-    #     self.win.clear()
-    #     self.win.border()
-    #     self.update_focus(self.focus)
-    #     lines = content.replace('\t', '    ').split('\n')
-    #     for i in range(min(self.nlines, len(lines))):
-    #         if self.center:
-    #             start_col = (self.ncols - min(len(lines[i]), self.ncols)) // 2 + 1
-    #         else:
-    #             start_col = 1
-    #         self.win.addstr(i + 1, start_col, lines[i][:self.ncols], attr)
-    #     self.win.refresh()
-    #     return
 
 
 class FrameInputWindow(Window):
@@ -168,57 +150,6 @@ class HierarchyWindow(Window):
         self.focus_line_index = max(self.focus_line_index - 1, 0)
         self.start_line = min(self.focus_line_index, self.start_line)
         return
-    
-
-# class ResultWindow(Window):
-#     def __init__(self, title, begin_y, begin_x, nlines=1, ncols=None, content=''):
-#         self.start_line = 0
-#         self.content = self.split_lines(content, ncols)
-#         super().__init__(title, begin_y, begin_x, nlines=nlines, ncols=ncols, content=self.content)
-#         return    
-    
-    # def split_lines(self, content, maxcols):
-    #     lines_tmp = content.replace('\t', '    ').split('\n')
-    #     lines = []
-    #     while lines_tmp:
-    #         if not lines_tmp[0]:
-    #             lines_tmp.pop(0)
-    #             lines[-1] += '\n'
-    #             continue
-    #         lines.append(lines_tmp[0][:maxcols])
-    #         lines_tmp[0] = lines_tmp[0][maxcols:]
-    #     return '\n'.join(lines)
-    
-    # def count_lines(self):
-    #     return len(self.content.split('\n'))
-    
-    # def scroll_down(self):
-    #     self.start_line = min(self.start_line + 1, self.count_lines() - self.nlines)
-    #     self.update_content()
-    #     return
-    
-    # def scroll_up(self):
-    #     self.start_line = max(self.start_line - 1, 0)
-    #     self.update_content()
-    #     return
-    
-    # def update_content(self, content: str = "", attr=0):
-    #     if not content:
-    #         content = self.content
-    #     else:
-    #         self.content = content
-    #     self.win.clear()
-    #     self.win.border()
-    #     self.update_focus(self.focus)
-    #     lines = content.replace('\t', '    ').split('\n')[self.start_line : self.start_line + self.nlines]
-    #     for i, line in enumerate(lines):
-    #         if self.center:
-    #             start_col = (self.ncols - min(len(line), self.ncols)) // 2 + 1
-    #         else:
-    #             start_col = 1
-    #         self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
-    #     self.win.refresh()
-    #     return
 
 
 class WindowGroup():
