@@ -1,5 +1,6 @@
 tmp_*
 *.index/
+data/
 
 # MacOS system files
 .DS_Store

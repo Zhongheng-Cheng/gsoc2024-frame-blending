@@ -1,0 +1,25 @@
+[
+    {
+        "id": "...",
+        "frames": ["<frame1>", "<frame2>", "", ""],
+        "settings": ["one-shot", "rhetorical"],
+        "blending_result": "<blending result>",
+        "evaluations": [
+            {
+                "completeness": "...",
+                "clarity": "...",
+                "relevance": "...",
+                "depth_of_understanding": "...",
+                "coherence": "...",
+                "execute_time": "...",
+                "additional_notes": "..."
+            },
+            {},
+            {},
+            {}
+        ]
+    },
+    {},
+    {},
+    {}
+]
