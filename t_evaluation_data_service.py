@@ -28,7 +28,7 @@ def get_data_service():
 
 def test_get_result():
     ds = get_data_service()
-    result = ds.get_result(id='3')
+    result = ds.get_result(id=3)
     print(result)
     return
 
@@ -38,7 +38,6 @@ def test_create_result():
     ds = get_data_service()
 
     ds.create_result(
-        id = '3',
         frames = ["Travel", "Aging"],
         settings = ["zero-shot", "rhetorical"],
         blending_result = "test result",
@@ -58,14 +57,14 @@ def test_update():
     ds = get_data_service()
     ds.insert_evaluation(
         EvaluationMatrix(3, 3, 3, 3, 3, 3, "Just Average"),
-        id='3'
+        id=3
     )
 
 @show_change
 def test_delete():
     ds = get_data_service()
     ds.delete_result(
-        id="2"
+        id=2
     )
 
 if __name__ == "__main__":

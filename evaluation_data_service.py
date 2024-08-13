@@ -62,7 +62,7 @@ class EvaluationDataService():
             json.dump(self.blending_results, out_file, indent=4)
 
     def get_result(self,
-                   id: str = None,
+                   id: int = None,
                    frames: list = None,
                    settings: list = None,
                    ) -> list:
@@ -75,15 +75,16 @@ class EvaluationDataService():
         return result
     
     def create_result(self,
-                      id: str = None,
                       frames: list = None,
                       settings: list = None,
                       blending_result: str = None,
                       evaluations: EvaluationMatrix = None,
                       ):
-        if id in [result["id"] for result in self.blending_results]:
-            print(f"result id: {id} already exists")
-            return
+        id_list = [result["id"] for result in self.blending_results]
+        if id_list:
+            id = max(id_list) + 1
+        else:
+            id = 0
         self.blending_results.append({
             "id": id,
             "frames": frames,
@@ -96,7 +97,7 @@ class EvaluationDataService():
     
     def insert_evaluation(self,
                           evaluation: EvaluationMatrix,
-                          id: str = None,
+                          id: int = None,
                           frames: list = None,
                           settings: list = None,
                           ):
@@ -109,7 +110,7 @@ class EvaluationDataService():
         return
 
     def delete_result(self,
-                      id: str
+                      id: int
                       ):
         for i, result in enumerate(self.blending_results):
             if ((id == result.get("id", None))):
