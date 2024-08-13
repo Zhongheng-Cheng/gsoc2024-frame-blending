@@ -8,27 +8,39 @@ import threading
 import os, sys
 
 class Window():
-    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content='', center=False):
+    def __init__(
+            self, 
+            title: str = "", 
+            begin_y: int = 0, 
+            begin_x: int = 0, 
+            nlines: int = 0, 
+            ncols: int = 0, 
+            content: str = "", 
+            center: bool = False
+        ):
+
         self.title = title
-        self.content = content
         self.begin_y = begin_y
         self.begin_x = begin_x
-        self.start_line = 0
         self.center = center
-        lines = content.split('\n')
-        if nlines:
-            self.nlines = nlines
-        else:
-            self.nlines = len(lines)
+        self.focus = False
+        self.start_line = 0
+
         if ncols:
             self.ncols = ncols
         else:
-            line_len = max([len(i) for i in lines])
+            max_line_len = max([len(i) for i in content.split('\n')])
             title_len = len(title)
-            self.ncols = max(line_len, title_len)
+            max_len = stdscr_width - begin_x
+            self.ncols = min(max_len, max(max_line_len, title_len))
+        self.content = self.split_lines(content, self.ncols)
+        if nlines:
+            self.nlines = nlines
+        else:
+            self.nlines = self.count_lines()
+        
         self.win = curses.newwin(self.nlines + 2, self.ncols + 2, begin_y, begin_x)
-        self.focus = False
-        self.update_content(content)
+        self.update_content(self.content)
         return
     
     def end_yx(self):
@@ -44,6 +56,32 @@ class Window():
         self.win.refresh()
         return
     
+    def split_lines(self, content, maxcols):
+        if not content:
+            return ""
+        lines_tmp = content.replace('\t', '    ').split('\n')
+        lines = []
+        while lines_tmp:
+            if not lines_tmp[0]:
+                lines_tmp.pop(0)
+                continue
+            lines.append(lines_tmp[0][:maxcols])
+            lines_tmp[0] = lines_tmp[0][maxcols:]
+        return '\n'.join(lines)
+    
+    def count_lines(self):
+        return len(self.content.split('\n'))
+    
+    def scroll_down(self):
+        self.start_line = min(self.start_line + 1, self.count_lines() - self.nlines)
+        self.update_content()
+        return
+    
+    def scroll_up(self):
+        self.start_line = max(self.start_line - 1, 0)
+        self.update_content()
+        return
+    
     def update_content(self, content: str = "", attr=0):
         if not content:
             content = self.content
@@ -52,15 +90,33 @@ class Window():
         self.win.clear()
         self.win.border()
         self.update_focus(self.focus)
-        lines = content.replace('\t', '    ').split('\n')
-        for i in range(min(self.nlines, len(lines))):
+        lines = content.replace('\t', '    ').split('\n')[self.start_line : self.start_line + self.nlines]
+        for i, line in enumerate(lines):
             if self.center:
-                start_col = (self.ncols - min(len(lines[i]), self.ncols)) // 2 + 1
+                start_col = (self.ncols - min(len(line), self.ncols)) // 2 + 1
             else:
                 start_col = 1
-            self.win.addstr(i + 1, start_col, lines[i][:self.ncols], attr)
+            self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
         self.win.refresh()
         return
+    
+    # def update_content(self, content: str = "", attr=0):
+    #     if not content:
+    #         content = self.content
+    #     else:
+    #         self.content = content
+    #     self.win.clear()
+    #     self.win.border()
+    #     self.update_focus(self.focus)
+    #     lines = content.replace('\t', '    ').split('\n')
+    #     for i in range(min(self.nlines, len(lines))):
+    #         if self.center:
+    #             start_col = (self.ncols - min(len(lines[i]), self.ncols)) // 2 + 1
+    #         else:
+    #             start_col = 1
+    #         self.win.addstr(i + 1, start_col, lines[i][:self.ncols], attr)
+    #     self.win.refresh()
+    #     return
 
 
 class FrameInputWindow(Window):
@@ -114,55 +170,55 @@ class HierarchyWindow(Window):
         return
     
 
-class ResultWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=1, ncols=None, content=''):
-        self.start_line = 0
-        self.content = self.split_lines(content, ncols)
-        super().__init__(title, begin_y, begin_x, nlines=nlines, ncols=ncols, content=self.content)
-        return    
+# class ResultWindow(Window):
+#     def __init__(self, title, begin_y, begin_x, nlines=1, ncols=None, content=''):
+#         self.start_line = 0
+#         self.content = self.split_lines(content, ncols)
+#         super().__init__(title, begin_y, begin_x, nlines=nlines, ncols=ncols, content=self.content)
+#         return    
     
-    def split_lines(self, content, maxcols):
-        lines_tmp = content.replace('\t', '    ').split('\n')
-        lines = []
-        while lines_tmp:
-            if not lines_tmp[0]:
-                lines_tmp.pop(0)
-                lines[-1] += '\n'
-                continue
-            lines.append(lines_tmp[0][:maxcols])
-            lines_tmp[0] = lines_tmp[0][maxcols:]
-        return '\n'.join(lines)
+    # def split_lines(self, content, maxcols):
+    #     lines_tmp = content.replace('\t', '    ').split('\n')
+    #     lines = []
+    #     while lines_tmp:
+    #         if not lines_tmp[0]:
+    #             lines_tmp.pop(0)
+    #             lines[-1] += '\n'
+    #             continue
+    #         lines.append(lines_tmp[0][:maxcols])
+    #         lines_tmp[0] = lines_tmp[0][maxcols:]
+    #     return '\n'.join(lines)
     
-    def count_lines(self):
-        return len(self.content.split('\n'))
+    # def count_lines(self):
+    #     return len(self.content.split('\n'))
     
-    def scroll_down(self):
-        self.start_line = min(self.start_line + 1, self.count_lines() - self.nlines)
-        self.update_content()
-        return
+    # def scroll_down(self):
+    #     self.start_line = min(self.start_line + 1, self.count_lines() - self.nlines)
+    #     self.update_content()
+    #     return
     
-    def scroll_up(self):
-        self.start_line = max(self.start_line - 1, 0)
-        self.update_content()
-        return
+    # def scroll_up(self):
+    #     self.start_line = max(self.start_line - 1, 0)
+    #     self.update_content()
+    #     return
     
-    def update_content(self, content: str = "", attr=0):
-        if not content:
-            content = self.content
-        else:
-            self.content = content
-        self.win.clear()
-        self.win.border()
-        self.update_focus(self.focus)
-        lines = content.replace('\t', '    ').split('\n')[self.start_line : self.start_line + self.nlines]
-        for i, line in enumerate(lines):
-            if self.center:
-                start_col = (self.ncols - min(len(line), self.ncols)) // 2 + 1
-            else:
-                start_col = 1
-            self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
-        self.win.refresh()
-        return
+    # def update_content(self, content: str = "", attr=0):
+    #     if not content:
+    #         content = self.content
+    #     else:
+    #         self.content = content
+    #     self.win.clear()
+    #     self.win.border()
+    #     self.update_focus(self.focus)
+    #     lines = content.replace('\t', '    ').split('\n')[self.start_line : self.start_line + self.nlines]
+    #     for i, line in enumerate(lines):
+    #         if self.center:
+    #             start_col = (self.ncols - min(len(line), self.ncols)) // 2 + 1
+    #         else:
+    #             start_col = 1
+    #         self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
+    #     self.win.refresh()
+    #     return
 
 
 class WindowGroup():
@@ -198,7 +254,7 @@ class WindowGroup():
             self.remove_frame_hierarchy()
         if self.wins[2]:
             self.remove_blending_result()
-        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-7, maxcols, content=text)
+        win = Window("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-7, maxcols, content=text)
         self.wins[2].append(win)
         
         return win
@@ -442,7 +498,7 @@ Tab:        Switch relation
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
-                response = prompt + '\n'.join([str(i) for i in range(20)])
+                response = prompt + '\n'.join([str(i) for i in range(40)])
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
