@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
+from evaluation_data_service import EvaluationDataService, EvaluationMatrix
 from prompts import Prompts
 import curses
 import threading
@@ -197,9 +198,14 @@ class WindowGroup():
             self.remove_frame_hierarchy()
         if self.wins[2]:
             self.remove_blending_result()
-        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-2, maxcols, content=text)
+        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-7, maxcols, content=text)
         self.wins[2].append(win)
+        
         return win
+    
+    def add_evaluation(self, maxcols, text):
+        eval_win = ResultWindow("Evaluation", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols, content=text)
+        self.wins[2].append(eval_win)
 
     def remove_frame_input(self):
         if len(self.wins[0]) > 1:
@@ -218,10 +224,10 @@ class WindowGroup():
         return
     
     def remove_blending_result(self):
-        win = self.wins[2][0]
-        win.win.clear()
-        win.win.refresh()
-        del self.wins[2][0]
+        for win in self.wins[2]:
+            win.win.clear()
+            win.win.refresh()
+        self.wins[2] = []
         return 
     
     def update_windows_focus(self):
@@ -377,6 +383,13 @@ Tab:        Switch relation
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
     window_group.update_cursor()
+    
+    ds = EvaluationDataService(
+        config = {
+            "data_directory": "data",
+            "data_file": "evaluation.json"
+        }
+    )
 
     while True:
 
@@ -433,6 +446,10 @@ Tab:        Switch relation
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
+                )
+                window_group.add_evaluation(
+                    maxcols = maxcols,
+                    text = "Press Tab to give feedback\nCompleteness:"
                 )
                 window_group.enter_focus([2, 0])
                 continue
