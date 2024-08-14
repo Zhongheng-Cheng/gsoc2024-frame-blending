@@ -143,11 +143,10 @@ class InputWindow(Window):
         return
     
 
-class HierarchyWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
-        self.start_line = 0
+class SelectWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content=''):
         self.focus_line_index = 0
-        self.selected_frame = ''
+        self.selected = ''
         super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         return
     
@@ -165,22 +164,22 @@ class HierarchyWindow(Window):
         if self.focus == True:
             focus_line = lines[self.focus_line_index]
             start_index = focus_line.rfind(' ') + 1
-            self.selected_frame = focus_line[start_index:]
+            self.selected = focus_line[start_index:]
             self.win.addstr(self.focus_line_index - self.start_line + 1, start_index + 1, focus_line[start_index:], curses.color_pair(2))
         self.win.refresh()
         return
     
-    def next_frame(self):
+    def next(self):
         content_nlines = len(self.content.split('\n'))
         self.focus_line_index = min(self.focus_line_index + 1, content_nlines - 1)
         self.start_line = max(self.start_line, self.focus_line_index - self.nlines + 1)
         return
     
-    def prev_frame(self):
+    def prev(self):
         self.focus_line_index = max(self.focus_line_index - 1, 0)
         self.start_line = min(self.focus_line_index, self.start_line)
         return
-
+    
 
 class WindowGroup():
     def __init__(self):
@@ -206,7 +205,7 @@ class WindowGroup():
     def add_frame_hierarchy(self, frame_relation_control):
         title = frame_relation_control.now()
         content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content)).strip()
-        win = HierarchyWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
+        win = SelectWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
         return
     
@@ -221,7 +220,7 @@ class WindowGroup():
         return win
     
     def add_evaluation(self, maxcols, text):
-        eval_win = HierarchyWindow("Evaluation", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols, content=text)
+        eval_win = SelectWindow("Press Tab to give feedback", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols, content=text)
         self.wins[2].append(eval_win)
 
     def remove_frame_input(self):
@@ -456,7 +455,7 @@ Tab:        Switch relation
                 )
                 window_group.add_evaluation(
                     maxcols = maxcols,
-                    text = "Press Tab to give feedback\nCompleteness:"
+                    text = "Completeness: 5\nclarity: 5\nrelevance: 5\ndepth_of_understanding: 5\ncoherence: 5\nexecute_time: 5\nadditional_notes: ..."
                 )
                 window_group.enter_focus([2, 0])
                 continue
@@ -496,13 +495,13 @@ Tab:        Switch relation
             
             # Switch frame
             elif key == curses.KEY_DOWN:
-                window_group.wins[1][0].next_frame()
+                window_group.wins[1][0].next()
             elif key == curses.KEY_UP:
-                window_group.wins[1][0].prev_frame()
+                window_group.wins[1][0].prev()
             
             # Confirm frame
             elif key == ord('\n'):
-                frame = window_group.wins[1][0].selected_frame
+                frame = window_group.wins[1][0].selected
                 window_group.quit_focus()
                 window_group.remove_frame_hierarchy()
                 window_group.focus_win().update_content(frame)
@@ -517,14 +516,22 @@ Tab:        Switch relation
                 window_group.remove_blending_result()
                 window_group.quit_focus()
 
-            # Scroll content
-            elif key == curses.KEY_DOWN:
-                window_group.focus_win().scroll_down()
-            elif key == curses.KEY_UP:
-                window_group.focus_win().scroll_up()
-
             elif key == ord('\t') or key == 9: # TAB
                 window_group.next_focus()
+            
+            elif window_group.focus_index[1] == 0:
+                # Scroll content
+                if key == curses.KEY_DOWN:
+                    window_group.focus_win().scroll_down()
+                elif key == curses.KEY_UP:
+                    window_group.focus_win().scroll_up()
+            
+            elif window_group.focus_index[1] == 1:
+                # Scroll content
+                if key == curses.KEY_DOWN:
+                    window_group.focus_win().next()
+                elif key == curses.KEY_UP:
+                    window_group.focus_win().prev()
         
     return
 
