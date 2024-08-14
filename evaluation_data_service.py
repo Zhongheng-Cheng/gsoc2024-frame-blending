@@ -78,7 +78,7 @@ class EvaluationDataService():
                       frames: list = None,
                       settings: list = None,
                       blending_result: str = None,
-                      evaluations: EvaluationMatrix = None,
+                      evaluations: dict = None,
                       ):
         id_list = [result["id"] for result in self.blending_results]
         if id_list:
@@ -90,13 +90,13 @@ class EvaluationDataService():
             "frames": frames,
             "settings": settings,
             "blending_result": blending_result,
-            "evaluations": [evaluations.to_dict()],
+            "evaluations": [evaluations],
         })
         self._save()
         return
     
     def insert_evaluation(self,
-                          evaluation: EvaluationMatrix,
+                          evaluation: dict,
                           id: int = None,
                           frames: list = None,
                           settings: list = None,
@@ -105,7 +105,7 @@ class EvaluationDataService():
             if ((id is None or id == result.get("id", None)) and \
                     (frames is None or frames == result.get("frames", None)) and \
                     (settings is None or settings == result.get("settings", None))):
-                result["evaluations"].append(evaluation.to_dict())
+                result["evaluations"].append(evaluation)
         self._save()
         return
 

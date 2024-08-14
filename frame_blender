@@ -1,33 +1,46 @@
 #!/usr/bin/env python3
 
 from frame_hierarchy_analyzer import get_frames, analyze_hierarchy
+from evaluation_data_service import EvaluationDataService, EvaluationMatrix
 from prompts import Prompts
 import curses
 import threading
 import os, sys
 
 class Window():
-    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content='', center=False):
+    def __init__(
+            self, 
+            title: str = "", 
+            begin_y: int = 0, 
+            begin_x: int = 0, 
+            nlines: int = 0, 
+            ncols: int = 0, 
+            content: str = "", 
+            center: bool = False
+        ):
+
         self.title = title
-        self.content = content
         self.begin_y = begin_y
         self.begin_x = begin_x
-        self.start_line = 0
         self.center = center
-        lines = content.split('\n')
-        if nlines:
-            self.nlines = nlines
-        else:
-            self.nlines = len(lines)
+        self.focus = False
+        self.start_line = 0
+
         if ncols:
             self.ncols = ncols
         else:
-            line_len = max([len(i) for i in lines])
+            max_line_len = max([len(i) for i in content.split('\n')])
             title_len = len(title)
-            self.ncols = max(line_len, title_len)
+            max_len = stdscr_width - begin_x
+            self.ncols = min(max_len, max(max_line_len, title_len))
+        self.content = self.split_lines(content, self.ncols)
+        if nlines:
+            self.nlines = nlines
+        else:
+            self.nlines = self.count_lines()
+        
         self.win = curses.newwin(self.nlines + 2, self.ncols + 2, begin_y, begin_x)
-        self.focus = False
-        self.update_content(content)
+        self.update_content(self.content)
         return
     
     def end_yx(self):
@@ -43,90 +56,14 @@ class Window():
         self.win.refresh()
         return
     
-    def update_content(self, content: str = "", attr=0):
-        if not content:
-            content = self.content
-        else:
-            self.content = content
-        self.win.clear()
-        self.win.border()
-        self.update_focus(self.focus)
-        lines = content.replace('\t', '    ').split('\n')
-        for i in range(min(self.nlines, len(lines))):
-            if self.center:
-                start_col = (self.ncols - min(len(lines[i]), self.ncols)) // 2 + 1
-            else:
-                start_col = 1
-            self.win.addstr(i + 1, start_col, lines[i][:self.ncols], attr)
-        self.win.refresh()
-        return
-
-
-class FrameInputWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
-        self.cursor_x = 0
-        self.confirmed = False
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
-        return        
-
-    def update_content(self, content: str = ""):
-        super().update_content(content, attr = self.confirmed * curses.color_pair(2))
-        return
-    
-
-class HierarchyWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=None, ncols=None, content=''):
-        self.start_line = 0
-        self.focus_line_index = 0
-        self.selected_frame = ''
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
-        return
-    
-    def update_content(self, content: str = ""):
-        if not content:
-            content = self.content
-        else:
-            self.content = content
-        self.win.clear()
-        self.win.border()
-        self.update_focus(self.focus)
-        lines = content.split('\n')
-        for i in range(min(self.nlines, len(lines) - self.start_line)):
-            self.win.addstr(i + 1, 1, lines[i + self.start_line][:self.ncols])
-        if self.focus == True:
-            focus_line = lines[self.focus_line_index]
-            start_index = focus_line.rfind(' ') + 1
-            self.selected_frame = focus_line[start_index:]
-            self.win.addstr(self.focus_line_index - self.start_line + 1, start_index + 1, focus_line[start_index:], curses.color_pair(2))
-        self.win.refresh()
-        return
-    
-    def next_frame(self):
-        content_nlines = len(self.content.split('\n'))
-        self.focus_line_index = min(self.focus_line_index + 1, content_nlines - 1)
-        self.start_line = max(self.start_line, self.focus_line_index - self.nlines + 1)
-        return
-    
-    def prev_frame(self):
-        self.focus_line_index = max(self.focus_line_index - 1, 0)
-        self.start_line = min(self.focus_line_index, self.start_line)
-        return
-    
-
-class ResultWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=1, ncols=None, content=''):
-        self.start_line = 0
-        self.content = self.split_lines(content, ncols)
-        super().__init__(title, begin_y, begin_x, nlines=nlines, ncols=ncols, content=self.content)
-        return    
-    
     def split_lines(self, content, maxcols):
+        if not content:
+            return ""
         lines_tmp = content.replace('\t', '    ').split('\n')
         lines = []
         while lines_tmp:
             if not lines_tmp[0]:
                 lines_tmp.pop(0)
-                lines[-1] += '\n'
                 continue
             lines.append(lines_tmp[0][:maxcols])
             lines_tmp[0] = lines_tmp[0][maxcols:]
@@ -145,8 +82,8 @@ class ResultWindow(Window):
         self.update_content()
         return
     
-    def update_content(self, content: str = "", attr=0):
-        if not content:
+    def update_content(self, content: str = None, attr=0):
+        if content is None:
             content = self.content
         else:
             self.content = content
@@ -162,7 +99,166 @@ class ResultWindow(Window):
             self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
         self.win.refresh()
         return
+    
 
+class Input():
+    def __init__(self):
+        self.cursor_x = 0
+        self.content = ""
+        return
+    
+    def move_cursor_right(self):
+        self.cursor_x = min(self.cursor_x + 1, len(self.content))
+
+    def move_cursor_left(self):
+        self.cursor_x = max(self.cursor_x - 1, 0)
+    
+    def delete_char(self):
+        if self.cursor_x > 0:
+            self.content = self.content[:self.cursor_x - 1] + self.content[self.cursor_x:]
+            self.move_cursor_left()
+
+    def add_char(self, char):
+        self.content = self.content[:self.cursor_x] + char + self.content[self.cursor_x:]
+        self.move_cursor_right()
+
+
+class InputWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, prompt=''):
+        self.prompt = prompt
+        self.confirmed = False
+        self.input = Input()
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content=prompt)
+        return
+
+    def update_cursor(self):
+        if self.focus:
+            curses.curs_set(2)
+            self.win.move(1, self.input.cursor_x + 1)
+        self.win.refresh()
+        return
+    
+    def update_focus(self, focus: bool):
+        super().update_focus(focus)
+        self.update_cursor()
+        return
+    
+    def update_content(self, content: str = ""):
+        super().update_content(content = self.input.content, attr = self.confirmed * curses.color_pair(2))
+        self.update_cursor()
+        return
+    
+
+class SelectWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content=''):
+        self.focus_line_index = 0
+        self.start_index = 0
+        self.selected = ''
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
+        return
+    
+    def update_content(self, content: str = ""):
+        if not content:
+            content = self.content
+        else:
+            self.content = content
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
+        lines = content.split('\n')
+        for i in range(min(self.nlines, len(lines) - self.start_line)):
+            self.win.addstr(i + 1, 1, lines[i + self.start_line][:self.ncols])
+        if self.focus == True:
+            focus_line = lines[self.focus_line_index]
+            self.start_index = focus_line.rfind(' ') + 1
+            self.selected = focus_line[self.start_index:]
+            self.win.addstr(self.focus_line_index - self.start_line + 1, self.start_index + 1, focus_line[self.start_index:], curses.color_pair(2))
+        self.win.refresh()
+        return
+    
+    def next(self):
+        content_nlines = len(self.content.split('\n'))
+        self.focus_line_index = min(self.focus_line_index + 1, content_nlines - 1)
+        self.start_line = max(self.start_line, self.focus_line_index - self.nlines + 1)
+        return
+    
+    def prev(self):
+        self.focus_line_index = max(self.focus_line_index - 1, 0)
+        self.start_line = min(self.focus_line_index, self.start_line)
+        return
+    
+
+class EvaluationWindow(SelectWindow):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content="completeness: 5\nclarity: 5\nrelevance: 5\ndepth_of_understanding: 5\ncoherence: 5\nexecute_time: 5\nadditional_notes: "):
+        self.input = Input()
+        self.focus_line_index = 0
+        self.start_index = 0
+        self.selected = ''
+        self.additional_notes = ""
+        self.content = content
+        self.lines = self.content.split('\n')
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
+        return
+    
+    def update_content(self, content: str = None):
+        if content is None:
+            content = self.content
+        else:
+            self.content = content
+        content += self.input.content
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
+        lines = content.split('\n')
+        for i in range(min(self.nlines, len(lines) - self.start_line)):
+            self.win.addstr(i + 1, 1, lines[i + self.start_line][:self.ncols])
+        if self.focus == True:
+            focus_line = lines[self.focus_line_index]
+            self.start_index = focus_line.rfind(': ') + 2
+            self.selected = focus_line[self.start_index:]
+            self.win.addstr(self.focus_line_index - self.start_line + 1, self.start_index + 1, focus_line[self.start_index:], curses.color_pair(2))
+        self.win.refresh()
+        return
+    
+    def inc_value(self):
+        int_value = int(self.selected)
+        if int_value < 10:
+            self.update_value(str(int_value + 1))
+        return
+    
+    def dec_value(self):
+        int_value = int(self.selected)
+        if int_value > 0:
+            self.update_value(str(int_value - 1))        
+        return
+    
+    def update_value(self, value):
+        self.lines[self.focus_line_index] = self.lines[self.focus_line_index][:self.start_index] + str(value)
+        self.update_content('\n'.join(self.lines))
+        return
+    
+    def export_evaluation_matrix(self):
+        eval_pairs = [line.split(": ") for line in self.lines]
+        eval_pairs = [[i, int(j)] for i, j in eval_pairs[:-1]]
+        eval_pairs[-1][-1] = self.input.content
+        matrix = {item: value for item, value in eval_pairs}
+        return matrix
+    
+    def submit_evaluation(
+            self, 
+            data_service,
+            frames, 
+            settings, 
+            blending_result
+        ):
+        data_service.create_result(
+            frames = frames, 
+            settings = settings, 
+            blending_result = blending_result, 
+            evaluations = self.export_evaluation_matrix()
+        )
+        return
+    
 
 class WindowGroup():
     def __init__(self):
@@ -181,14 +277,14 @@ class WindowGroup():
     
     def add_frame_input(self, start_y, start_x):
         title = f"Frame {len(self.wins[0]) + 1}"
-        win_input = FrameInputWindow(title, start_y, start_x, ncols=20)
+        win_input = InputWindow(title, start_y, start_x, ncols=20)
         self.add(win_input)
         return
     
     def add_frame_hierarchy(self, frame_relation_control):
         title = frame_relation_control.now()
         content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content)).strip()
-        win = HierarchyWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
+        win = SelectWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
         return
     
@@ -197,9 +293,14 @@ class WindowGroup():
             self.remove_frame_hierarchy()
         if self.wins[2]:
             self.remove_blending_result()
-        win = ResultWindow("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-2, maxcols, content=text)
+        win = Window("Blending Result", 0, self.wins[0][0].end_yx()[1], stdscr_height-7, maxcols, content=text)
         self.wins[2].append(win)
+        
         return win
+    
+    def add_evaluation(self, maxcols):
+        eval_win = EvaluationWindow("Press Tab to give feedback", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols)
+        self.wins[2].append(eval_win)
 
     def remove_frame_input(self):
         if len(self.wins[0]) > 1:
@@ -218,23 +319,23 @@ class WindowGroup():
         return
     
     def remove_blending_result(self):
-        win = self.wins[2][0]
-        win.win.clear()
-        win.win.refresh()
-        del self.wins[2][0]
+        for win in self.wins[2]:
+            win.win.clear()
+            win.win.refresh()
+        self.wins[2] = []
         return 
     
     def update_windows_focus(self):
+        # curses.curs_set(0)
         for col in self.wins:
             for win in col:
                 win.update_focus(False)
         win = self.focus_win()
         win.update_focus(True)
-        win.cursor_x = len(win.content)
         return
     
     def next_focus(self):
-        self.focus_index[1] = (self.focus_index[1] + 1) % len(self.wins[0])
+        self.focus_index[1] = (self.focus_index[1] + 1) % len(self.wins[self.focus_index[0]])
         self.update_windows_focus()
         return
     
@@ -244,7 +345,7 @@ class WindowGroup():
         return
     
     def enter_focus(self, win_index: list):
-        curses.curs_set(0)
+        # curses.curs_set(0)
         self._tmp_focus_index = self.focus_index
         self.focus_index = win_index
         self.update_windows_focus()
@@ -255,24 +356,16 @@ class WindowGroup():
         win.update_focus(False)
         win.update_content()
         self.focus_index = self._tmp_focus_index
-        self.update_cursor()
         self.update_windows_focus()
         return
     
-    def focus_win(self) -> Window:
+    def focus_win(self):
         """
         Return the current focused window.
         """
         col, i = self.focus_index
         win = self.wins[col][i]
         return win
-    
-    def update_cursor(self):
-        curses.curs_set(2)
-        win = self.focus_win()
-        win.win.move(1, win.cursor_x + 1)
-        win.win.refresh()
-        return
     
 
 class GroupCycle():
@@ -330,7 +423,6 @@ def main(stdscr):
             window.update_content(text, curses.color_pair(3))
         elif text == "Failed":
             window.update_content(text, curses.color_pair(4))
-        window_group.update_cursor()
 
 
     foldername = "frame"
@@ -376,7 +468,13 @@ Tab:        Switch relation
 
     window_group = WindowGroup()
     window_group.add_frame_input(0, win_key.end_yx()[1])
-    window_group.update_cursor()
+    
+    ds = EvaluationDataService(
+        config = {
+            "data_directory": "data",
+            "data_file": "evaluation.json"
+        }
+    )
 
     while True:
 
@@ -429,10 +527,13 @@ Tab:        Switch relation
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
-                response = prompt + '\n'.join([str(i) for i in range(20)])
+                response = prompt + '\n'.join([str(i) for i in range(40)]) # TODO: delete
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
+                )
+                window_group.add_evaluation(
+                    maxcols = maxcols,
                 )
                 window_group.enter_focus([2, 0])
                 continue
@@ -446,17 +547,14 @@ Tab:        Switch relation
             else:
                 win = window_group.focus_win()
                 if key == curses.KEY_BACKSPACE or key == 127:
-                    win.content = win.content[:win.cursor_x - 1] + win.content[win.cursor_x:]
-                    win.cursor_x = max(win.cursor_x - 1, 0)
+                    win.input.delete_char()
                 elif key == curses.KEY_LEFT:
-                    win.cursor_x = max(win.cursor_x - 1, 0)
+                    win.input.move_cursor_left()
                 elif key == curses.KEY_RIGHT:
-                    win.cursor_x = min(win.cursor_x + 1, len(win.content))
+                    win.input.move_cursor_right()
                 else: # input characters
-                    win.content = win.content[:win.cursor_x] + chr(key) + win.content[win.cursor_x:]
-                    win.cursor_x += 1
-
-            window_group.update_cursor()
+                    win.input.add_char(chr(key))
+                win.update_content(win.input.content)
 
             if window_group.wins[1]:
                 window_group.remove_frame_hierarchy()
@@ -471,38 +569,79 @@ Tab:        Switch relation
         elif window_group.focus_index[0] == 1:
 
             # Quit frame hierarchy
-            if key == curses.KEY_BACKSPACE or key == 127:
+            if key == ord('\\'):
                 window_group.quit_focus()
             
             # Switch frame
             elif key == curses.KEY_DOWN:
-                window_group.wins[1][0].next_frame()
+                window_group.wins[1][0].next()
             elif key == curses.KEY_UP:
-                window_group.wins[1][0].prev_frame()
+                window_group.wins[1][0].prev()
             
             # Confirm frame
             elif key == ord('\n'):
-                frame = window_group.wins[1][0].selected_frame
+                frame = window_group.wins[1][0].selected
                 window_group.quit_focus()
                 window_group.remove_frame_hierarchy()
                 window_group.focus_win().update_content(frame)
                 window_group.focus_win().confirmed = True
         
-        # When focus on blending result window
+        # When focus on blending result window column
         elif window_group.focus_index[0] == 2:
+            win = window_group.focus_win()
 
+            if key == ord('\t') or key == 9: # TAB
+                window_group.next_focus()
+            
             # Quit frame hierarchy
-            if key == curses.KEY_BACKSPACE or key == 127:
+            elif key == ord('\\'):
                 window_group.quit_focus()
                 window_group.remove_blending_result()
-                window_group.quit_focus()
+            
+            # When focus on result window
+            elif window_group.focus_index[1] == 0:
 
-            # Scroll content
-            elif key == curses.KEY_DOWN:
-                window_group.wins[2][0].scroll_down()
-            elif key == curses.KEY_UP:
-                window_group.wins[2][0].scroll_up()
-        
+                # Scroll content
+                if key == curses.KEY_DOWN:
+                    win.scroll_down()
+                elif key == curses.KEY_UP:
+                    win.scroll_up()
+            
+            # When focus on evaluation window
+            elif window_group.focus_index[1] == 1:
+
+                # Confirm frame
+                if key == ord('\n'):
+                    win.submit_evaluation(
+                        data_service = ds,
+                        frames = [win.content for win in window_group.wins[0] if win.confirmed], 
+                        settings = "zero-shot", 
+                        blending_result = window_group.wins[2][0].content
+                    )
+                    window_group.quit_focus()
+                    window_group.remove_blending_result()
+
+                # Scroll content
+                elif key == curses.KEY_DOWN:
+                    win.next()
+                elif key == curses.KEY_UP:
+                    win.prev()
+                elif win.focus_line_index < len(win.lines) - 1:
+                    if key == curses.KEY_LEFT:
+                        win.dec_value()
+                    elif key == curses.KEY_RIGHT:
+                        win.inc_value()
+                else:
+                    if key == curses.KEY_BACKSPACE or key == 127:
+                        win.input.delete_char()
+                    elif key == curses.KEY_LEFT:
+                        win.input.move_cursor_left()
+                    elif key == curses.KEY_RIGHT:
+                        win.input.move_cursor_right()
+                    else: # input characters
+                        win.input.add_char(chr(key))
+                    win.update_content()
+
     return
 
 
