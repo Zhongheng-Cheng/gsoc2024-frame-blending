@@ -24,25 +24,26 @@ For example, "wasting time" implies a loss similar to wasting money, highlightin
 
     rhetorical = """Prefer to use rhetorical devices such as Analogy and Metaphor."""
 
-    def zero_shot_blending(self, frames: list[str] = [], rhetorical: bool = True):
-        prompt = f"""Create a frame blending example sentence between frames: "{'", "'.join(frames)}". """
+    def zero_shot_blending(self, frames = [], rhetorical: bool = True):
+        frame_names = ', '.join(f'"{frame}"' for frame in frames)
+        prompt = f"""Create a frame blending example sentence between frames: {frame_names}. """
         if rhetorical:
             prompt += '\n' + self.rhetorical
         return prompt
 
-    def one_shot_blending(self, frames: list[str] = [], rhetorical: bool = True):
+    def one_shot_blending(self, frames = [], rhetorical: bool = True):
         return self.zero_shot_blending(frames, rhetorical) + '\n' + self.one_shot_example
 
-    def cot_blending(self, frames: list[str] = [], rhetorical: bool = True):
+    def cot_blending(self, frames = [], rhetorical: bool = True):
         n = len(frames)
-        prompt = f'''Let's break down the task into smaller, logical steps to ensure clarity and thoroughness.
-
-{'\n'.join([f"{i + 1}. Define the '{frame}' frame." for i, frame in enumerate(frames)])}
+        prompt_define_prompts = '\n'.join([f"{i + 1}. Define the '{frame}' frame." for i, frame in enumerate(frames)])
+        prompt = f"""Let's break down the task into smaller, logical steps to ensure clarity and thoroughness.
+{prompt_define_prompts}
 {n + 1}. Explain how these frames can have cross-space mapping on their structures and elements.
 {n + 2}. Create a frame blending example sentence that demonstrates how these frames blend. Explain the input space, cross-space mapping, blended space, and emergent structure.
 
 Please follow these steps to provide a detailed and clear explanation.
-'''
+"""
         if rhetorical:
             prompt += '\n' + self.rhetorical
         return prompt
