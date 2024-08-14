@@ -239,6 +239,8 @@ class EvaluationWindow(SelectWindow):
     
     def export_evaluation_matrix(self):
         eval_pairs = [line.split(": ") for line in self.lines]
+        eval_pairs = [[i, int(j)] for i, j in eval_pairs[:-1]]
+        eval_pairs[-1][-1] = self.input.content
         matrix = {item: value for item, value in eval_pairs}
         return matrix
     
@@ -249,7 +251,13 @@ class EvaluationWindow(SelectWindow):
             settings, 
             blending_result
         ):
-        pass
+        data_service.create_result(
+            frames = frames, 
+            settings = settings, 
+            blending_result = blending_result, 
+            evaluations = self.export_evaluation_matrix()
+        )
+        return
     
 
 class WindowGroup():
@@ -519,7 +527,7 @@ Tab:        Switch relation
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
-                response = prompt + '\n'.join([str(i) for i in range(40)])
+                response = prompt + '\n'.join([str(i) for i in range(40)]) # TODO: delete
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
@@ -578,7 +586,7 @@ Tab:        Switch relation
                 window_group.focus_win().update_content(frame)
                 window_group.focus_win().confirmed = True
         
-        # When focus on blending result window
+        # When focus on blending result window column
         elif window_group.focus_index[0] == 2:
             win = window_group.focus_win()
 
@@ -604,7 +612,14 @@ Tab:        Switch relation
 
                 # Confirm frame
                 if key == ord('\n'):
-                    win.submit_evaluation()
+                    win.submit_evaluation(
+                        data_service = ds,
+                        frames = [win.content for win in window_group.wins[0] if win.confirmed], 
+                        settings = "zero-shot", 
+                        blending_result = window_group.wins[2][0].content
+                    )
+                    window_group.quit_focus()
+                    window_group.remove_blending_result()
 
                 # Scroll content
                 elif key == curses.KEY_DOWN:
