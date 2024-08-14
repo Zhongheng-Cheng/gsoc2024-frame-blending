@@ -190,6 +190,7 @@ class SelectWindow(Window):
 
 class EvaluationWindow(SelectWindow):
     def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content="completeness: 5\nclarity: 5\nrelevance: 5\ndepth_of_understanding: 5\ncoherence: 5\nexecute_time: 5\nadditional_notes: "):
+        self.input = Input()
         self.focus_line_index = 0
         self.start_index = 0
         self.selected = ''
@@ -199,11 +200,12 @@ class EvaluationWindow(SelectWindow):
         super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         return
     
-    def update_content(self, content: str = ""):
-        if not content:
+    def update_content(self, content: str = None):
+        if content is None:
             content = self.content
         else:
             self.content = content
+        content += self.input.content
         self.win.clear()
         self.win.border()
         self.update_focus(self.focus)
@@ -230,9 +232,6 @@ class EvaluationWindow(SelectWindow):
             self.update_value(str(int_value - 1))        
         return
     
-    def char_input(self, char):
-        pass
-    
     def update_value(self, value):
         self.lines[self.focus_line_index] = self.lines[self.focus_line_index][:self.start_index] + str(value)
         self.update_content('\n'.join(self.lines))
@@ -242,6 +241,16 @@ class EvaluationWindow(SelectWindow):
         eval_pairs = [line.split(": ") for line in self.lines]
         matrix = {item: value for item, value in eval_pairs}
         return matrix
+    
+    def submit_evaluation(
+            self, 
+            data_service,
+            frames, 
+            settings, 
+            blending_result
+        ):
+        pass
+    
 
 class WindowGroup():
     def __init__(self):
@@ -552,7 +561,7 @@ Tab:        Switch relation
         elif window_group.focus_index[0] == 1:
 
             # Quit frame hierarchy
-            if key == curses.KEY_BACKSPACE or key == 127:
+            if key == ord('\\'):
                 window_group.quit_focus()
             
             # Switch frame
@@ -573,17 +582,17 @@ Tab:        Switch relation
         elif window_group.focus_index[0] == 2:
             win = window_group.focus_win()
 
+            if key == ord('\t') or key == 9: # TAB
+                window_group.next_focus()
+            
             # Quit frame hierarchy
-            if key == curses.KEY_BACKSPACE or key == 127:
+            elif key == ord('\\'):
                 window_group.quit_focus()
                 window_group.remove_blending_result()
-                window_group.quit_focus()
-
-            elif key == ord('\t') or key == 9: # TAB
-                window_group.next_focus()
             
             # When focus on result window
             elif window_group.focus_index[1] == 0:
+
                 # Scroll content
                 if key == curses.KEY_DOWN:
                     win.scroll_down()
@@ -592,16 +601,32 @@ Tab:        Switch relation
             
             # When focus on evaluation window
             elif window_group.focus_index[1] == 1:
+
+                # Confirm frame
+                if key == ord('\n'):
+                    win.submit_evaluation()
+
                 # Scroll content
-                if key == curses.KEY_DOWN:
+                elif key == curses.KEY_DOWN:
                     win.next()
                 elif key == curses.KEY_UP:
                     win.prev()
-                elif key == curses.KEY_LEFT:
-                    win.dec_value()
-                elif key == curses.KEY_RIGHT:
-                    win.inc_value()
-        
+                if win.focus_line_index < len(win.lines) - 1:
+                    if key == curses.KEY_LEFT:
+                        win.dec_value()
+                    elif key == curses.KEY_RIGHT:
+                        win.inc_value()
+                else:
+                    if key == curses.KEY_BACKSPACE or key == 127:
+                        win.input.delete_char()
+                    elif key == curses.KEY_LEFT:
+                        win.input.move_cursor_left()
+                    elif key == curses.KEY_RIGHT:
+                        win.input.move_cursor_right()
+                    else: # input characters
+                        win.input.add_char(chr(key))
+                    win.update_content()
+
     return
 
 
