@@ -146,6 +146,7 @@ class InputWindow(Window):
 class SelectWindow(Window):
     def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content=''):
         self.focus_line_index = 0
+        self.start_index = 0
         self.selected = ''
         super().__init__(title, begin_y, begin_x, nlines, ncols, content)
         return
@@ -163,9 +164,9 @@ class SelectWindow(Window):
             self.win.addstr(i + 1, 1, lines[i + self.start_line][:self.ncols])
         if self.focus == True:
             focus_line = lines[self.focus_line_index]
-            start_index = focus_line.rfind(' ') + 1
-            self.selected = focus_line[start_index:]
-            self.win.addstr(self.focus_line_index - self.start_line + 1, start_index + 1, focus_line[start_index:], curses.color_pair(2))
+            self.start_index = focus_line.rfind(' ') + 1
+            self.selected = focus_line[self.start_index:]
+            self.win.addstr(self.focus_line_index - self.start_line + 1, self.start_index + 1, focus_line[self.start_index:], curses.color_pair(2))
         self.win.refresh()
         return
     
@@ -180,6 +181,61 @@ class SelectWindow(Window):
         self.start_line = min(self.focus_line_index, self.start_line)
         return
     
+
+class EvaluationWindow(SelectWindow):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content="completeness: 5\nclarity: 5\nrelevance: 5\ndepth_of_understanding: 5\ncoherence: 5\nexecute_time: 5\nadditional_notes: "):
+        self.focus_line_index = 0
+        self.start_index = 0
+        self.selected = ''
+        self.additional_notes = ""
+        self.content = content
+        self.lines = self.content.split('\n')
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
+        return
+    
+    def update_content(self, content: str = ""):
+        if not content:
+            content = self.content
+        else:
+            self.content = content
+        self.win.clear()
+        self.win.border()
+        self.update_focus(self.focus)
+        lines = content.split('\n')
+        for i in range(min(self.nlines, len(lines) - self.start_line)):
+            self.win.addstr(i + 1, 1, lines[i + self.start_line][:self.ncols])
+        if self.focus == True:
+            focus_line = lines[self.focus_line_index]
+            self.start_index = focus_line.rfind(': ') + 2
+            self.selected = focus_line[self.start_index:]
+            self.win.addstr(self.focus_line_index - self.start_line + 1, self.start_index + 1, focus_line[self.start_index:], curses.color_pair(2))
+        self.win.refresh()
+        return
+    
+    def inc_value(self):
+        int_value = int(self.selected)
+        if int_value < 10:
+            self.update_value(str(int_value + 1))
+        return
+    
+    def dec_value(self):
+        int_value = int(self.selected)
+        if int_value > 0:
+            self.update_value(str(int_value - 1))        
+        return
+    
+    def char_input(self, char):
+        pass
+    
+    def update_value(self, value):
+        self.lines[self.focus_line_index] = self.lines[self.focus_line_index][:self.start_index] + str(value)
+        self.update_content('\n'.join(self.lines))
+        return
+    
+    def export_evaluation_matrix(self):
+        eval_pairs = [line.split(": ") for line in self.lines]
+        matrix = {item: value for item, value in eval_pairs}
+        return matrix
 
 class WindowGroup():
     def __init__(self):
@@ -219,8 +275,8 @@ class WindowGroup():
         
         return win
     
-    def add_evaluation(self, maxcols, text):
-        eval_win = SelectWindow("Press Tab to give feedback", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols, content=text)
+    def add_evaluation(self, maxcols):
+        eval_win = EvaluationWindow("Press Tab to give feedback", stdscr_height-5, self.wins[0][0].end_yx()[1], 3, maxcols)
         self.wins[2].append(eval_win)
 
     def remove_frame_input(self):
@@ -455,7 +511,6 @@ Tab:        Switch relation
                 )
                 window_group.add_evaluation(
                     maxcols = maxcols,
-                    text = "Completeness: 5\nclarity: 5\nrelevance: 5\ndepth_of_understanding: 5\ncoherence: 5\nexecute_time: 5\nadditional_notes: ..."
                 )
                 window_group.enter_focus([2, 0])
                 continue
@@ -509,6 +564,7 @@ Tab:        Switch relation
         
         # When focus on blending result window
         elif window_group.focus_index[0] == 2:
+            win = window_group.focus_win()
 
             # Quit frame hierarchy
             if key == curses.KEY_BACKSPACE or key == 127:
@@ -519,19 +575,25 @@ Tab:        Switch relation
             elif key == ord('\t') or key == 9: # TAB
                 window_group.next_focus()
             
+            # When focus on result window
             elif window_group.focus_index[1] == 0:
                 # Scroll content
                 if key == curses.KEY_DOWN:
-                    window_group.focus_win().scroll_down()
+                    win.scroll_down()
                 elif key == curses.KEY_UP:
-                    window_group.focus_win().scroll_up()
+                    win.scroll_up()
             
+            # When focus on evaluation window
             elif window_group.focus_index[1] == 1:
                 # Scroll content
                 if key == curses.KEY_DOWN:
-                    window_group.focus_win().next()
+                    win.next()
                 elif key == curses.KEY_UP:
-                    window_group.focus_win().prev()
+                    win.prev()
+                elif key == curses.KEY_LEFT:
+                    win.dec_value()
+                elif key == curses.KEY_RIGHT:
+                    win.inc_value()
         
     return
 
