@@ -82,8 +82,8 @@ class Window():
         self.update_content()
         return
     
-    def update_content(self, content: str = "", attr=0):
-        if not content:
+    def update_content(self, content: str = None, attr=0):
+        if content is None:
             content = self.content
         else:
             self.content = content
@@ -99,23 +99,19 @@ class Window():
             self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
         self.win.refresh()
         return
+    
 
-
-class InputWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, prompt=''):
-        self.prompt = prompt
+class Input():
+    def __init__(self):
         self.cursor_x = 0
-        self.confirmed = False
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content=prompt)
+        self.content = ""
         return
     
     def move_cursor_right(self):
         self.cursor_x = min(self.cursor_x + 1, len(self.content))
-        self.update_cursor()
 
     def move_cursor_left(self):
         self.cursor_x = max(self.cursor_x - 1, 0)
-        self.update_cursor()
     
     def delete_char(self):
         if self.cursor_x > 0:
@@ -126,10 +122,19 @@ class InputWindow(Window):
         self.content = self.content[:self.cursor_x] + char + self.content[self.cursor_x:]
         self.move_cursor_right()
 
+
+class InputWindow(Window):
+    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, prompt=''):
+        self.prompt = prompt
+        self.confirmed = False
+        self.input = Input()
+        super().__init__(title, begin_y, begin_x, nlines, ncols, content=prompt)
+        return
+
     def update_cursor(self):
         if self.focus:
             curses.curs_set(2)
-            self.win.move(1, self.cursor_x + 1)
+            self.win.move(1, self.input.cursor_x + 1)
         self.win.refresh()
         return
     
@@ -139,7 +144,8 @@ class InputWindow(Window):
         return
     
     def update_content(self, content: str = ""):
-        super().update_content(content = self.prompt + content, attr = self.confirmed * curses.color_pair(2))
+        super().update_content(content = self.input.content, attr = self.confirmed * curses.color_pair(2))
+        self.update_cursor()
         return
     
 
@@ -524,13 +530,14 @@ Tab:        Switch relation
             else:
                 win = window_group.focus_win()
                 if key == curses.KEY_BACKSPACE or key == 127:
-                    win.delete_char()
+                    win.input.delete_char()
                 elif key == curses.KEY_LEFT:
-                    win.move_cursor_left()
+                    win.input.move_cursor_left()
                 elif key == curses.KEY_RIGHT:
-                    win.move_cursor_right()
+                    win.input.move_cursor_right()
                 else: # input characters
-                    win.add_char(chr(key))
+                    win.input.add_char(chr(key))
+                win.update_content(win.input.content)
 
             if window_group.wins[1]:
                 window_group.remove_frame_hierarchy()
