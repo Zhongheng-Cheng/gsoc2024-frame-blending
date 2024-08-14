@@ -626,7 +626,7 @@ Tab:        Switch relation
                     win.next()
                 elif key == curses.KEY_UP:
                     win.prev()
-                if win.focus_line_index < len(win.lines) - 1:
+                elif win.focus_line_index < len(win.lines) - 1:
                     if key == curses.KEY_LEFT:
                         win.dec_value()
                     elif key == curses.KEY_RIGHT:
