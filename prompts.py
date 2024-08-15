@@ -1,5 +1,11 @@
 class Prompts:
 
+    def __getitem__(self, key):
+        method = getattr(self, key)
+        if callable(method):
+            return method
+        raise KeyError(f"Method {key} not found or is not callable")
+
     one_shot_example = '''Here is an example of frame blending analysis, you should follow this analyzing process while generating, but not use this example:
 # Expression
 "Time is money."

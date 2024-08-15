@@ -141,11 +141,12 @@ class Input():
 
 
 class InputWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, prompt=''):
+    def __init__(self, *args, prompt='', **kwargs):
+        
         self.prompt = prompt
         self.confirmed = False
         self.input = Input()
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content=prompt)
+        super().__init__(*args, content=prompt, **kwargs)
         return
 
     def update_cursor(self):
@@ -168,10 +169,12 @@ class InputWindow(Window):
 
 class SelectWindow(Window):
 
-    focus_line_index = 0
-    start_char = 0
-    selected = ''
-    separator = ' '
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.focus_line_index = 0
+        self.start_char = 0
+        self.selected = ''
+        self.separator = ' '
     
     def update_content(self, content: str = None, separator: str = ' '):
         lines = super().update_content(content)
@@ -199,15 +202,16 @@ class SelectWindow(Window):
     
 
 class EvaluationWindow(SelectWindow):
-    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content="completeness: 5\nclarity: 5\nrelevance: 5\ndepth_of_understanding: 5\ncoherence: 5\nexecute_time: 5\nadditional_notes: "):
+    def __init__(self, *args, content="completeness: 5\nclarity: 5\nrelevance: 5\ndepth_of_understanding: 5\ncoherence: 5\nexecute_time: 5\nadditional_notes: ", **kwargs):
+        self.content = content
+        self.lines = self.content.split('\n')
+        
         self.input = Input()
         self.focus_line_index = 0
         self.start_index = 0
         self.selected = ''
         self.additional_notes = ""
-        self.content = content
-        self.lines = self.content.split('\n')
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
+        super().__init__(*args, content=content, **kwargs)
         return
     
     def update_content(self, content: str = None):
@@ -291,9 +295,9 @@ class WindowGroup():
         self.add(win_input)
         return
     
-    def add_frame_hierarchy(self, frame_relation_control):
-        title = frame_relation_control.now()
-        content = str(frame_relation_control.hierarchy_root().find(self.focus_win().content)).strip()
+    def add_frame_hierarchy(self, relation, root):
+        title = relation
+        content = str(root.find(self.focus_win().content)).strip()
         win = SelectWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
         return
@@ -400,17 +404,42 @@ class CycleList():
         return
 
 
-# class SettingsWindow(SelectWindow):
-#     def __init__(self):
-#         frames = get_frames(FRAME_FOLDER)
-#         frame_relation_control = FrameRelationGroup(frames)
+class SettingsWindow(SelectWindow):
 
-#     def get_relation_list(self, frames):
-#         self.roots = {}
-#         self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
-#         for relation in self.relations:
-#             self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
-#             self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
+    def __init__(self, *args, **kwargs):
+        
+        self.settings = {
+            "relations": CycleList([
+                "Inheritance: children", 
+                "Inheritance: parents", 
+                "Perspective: children",
+                "Perspective: parents", 
+                "Usage: children", 
+                "Usage: parents", 
+                "Subframe: children",
+                "Subframe: parents"
+            ]),
+            "prompting": CycleList([
+                "zero-shot",
+                "one-shot",
+                "few-shot",
+                "chain-of-thought"
+            ]),
+            "rhetorical": CycleList([
+                "rhetorical",
+                "non-rhetorical"
+            ])
+        }
+        super().__init__(*args, **kwargs)
+        return
+    
+    def to_text(self):
+        now_list = [item.now() for item in self.settings.values()]
+        return '\n'.join(now_list)
+    
+    def update_content(self, *args, **kwargs):
+        super().update_content(self.to_text())
+        return
 
 
 class FrameRelationGroup(CycleList):
@@ -449,7 +478,7 @@ def main(stdscr):
             window.update_content(text, curses.color_pair(4))
 
 
-    frame_relation_control = FrameRelationGroup()
+    # frame_relation_control = FrameRelationGroup()
     stdscr.clear()
     stdscr.refresh()
 
@@ -481,7 +510,15 @@ Tab:        Switch relation
             confirmed frames"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
 
-    win_hier_relation = SelectWindow("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, center=True)
+    win_hier_relation = SettingsWindow("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, nlines=3, center=True)
+    hierarchy_roots = {}
+    frames = get_frames(FRAME_FOLDER)
+    for item in win_hier_relation.settings["relations"].items:
+        relation, dir = item.split(": ")
+        if dir == "children":
+            hierarchy_roots[item] = analyze_hierarchy(frames, relation, encoding=encoding)
+        else:
+            hierarchy_roots[item] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
 
     win_query_engine = Window("Query Engine", win_hier_relation.end_yx()[0], 0, ncols=win_key.ncols, content="Loading", center=True)
 
@@ -499,7 +536,7 @@ Tab:        Switch relation
 
         # Refresh windows display
         win_logo.update_content()
-        win_hier_relation.update_content(frame_relation_control.now())
+        win_hier_relation.update_content()
         window_group.focus_win().update_content()
         
         key = stdscr.getch()
@@ -525,7 +562,7 @@ Tab:        Switch relation
 
             # Switch Frame Hierarchy
             elif key == ord('\t') or key == 9: # TAB
-                frame_relation_control.next()
+                win_hier_relation.settings["relations"].next()
             
             # Enter frame Hierarchy
             elif key == ord('\n'):
@@ -572,9 +609,11 @@ Tab:        Switch relation
                 window_group.remove_frame_hierarchy()
             win = window_group.focus_win()
             if not win.confirmed:
-                hierarchy = frame_relation_control.hierarchy_root().find(win.content)
+                relation = win_hier_relation.settings["relations"].now()
+                root = hierarchy_roots[relation]
+                hierarchy = root.find(win.content)
                 if hierarchy:
-                    window_group.add_frame_hierarchy(frame_relation_control)
+                    window_group.add_frame_hierarchy(relation, root)
             
         
         # When focus on hierarchy window
