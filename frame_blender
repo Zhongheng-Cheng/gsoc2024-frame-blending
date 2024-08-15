@@ -516,27 +516,24 @@ Tab:        Switch relation
             confirmed frames"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
     wg = WindowGroup()
-    win_hier_relation = SettingsWindow("Hierarchy Relation", 0, win_key.end_yx()[1], ncols=win_key.ncols, nlines=3, center=True)
-    wg.add(win_hier_relation, 0)
+    win_settings = SettingsWindow("Settings", 0, win_key.end_yx()[1], ncols=win_key.ncols, nlines=3, center=True)
+    wg.add(win_settings, 0)
     
     hierarchy_roots = {}
     frames = get_frames(FRAME_FOLDER)
-    for item in win_hier_relation.settings["relations"].items:
+    for item in win_settings.settings["relations"].items:
         relation, dir = item.split(": ")
         if dir == "children":
             hierarchy_roots[item] = analyze_hierarchy(frames, relation, encoding=encoding)
         else:
             hierarchy_roots[item] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
     
-    wg.add_frame_input(win_hier_relation.end_yx()[0], win_key.end_yx()[1])
+    wg.add_frame_input(win_settings.end_yx()[0], win_key.end_yx()[1])
 
     win_query_engine = Window("Query Engine", win_key.end_yx()[0], 0, ncols=win_key.ncols, content="Loading", center=True)
 
     loading_thread = threading.Thread(target=background_loading, args=(win_query_engine,))
     loading_thread.start()
-
-    
-    
     
     ds = EvaluationDataService(
         EVALUATION_CONFIG
@@ -546,7 +543,7 @@ Tab:        Switch relation
 
         # Refresh windows display
         win_logo.update_content()
-        win_hier_relation.update_content()
+        win_settings.update_content()
         wg.focus_win().update_content()
         
         key = stdscr.getch()
@@ -632,7 +629,7 @@ Tab:        Switch relation
                 wg.remove_frame_hierarchy()
             win = wg.focus_win()
             if win.id == "input" and not win.confirmed:
-                relation = win_hier_relation.settings["relations"].now()
+                relation = win_settings.settings["relations"].now()
                 root = hierarchy_roots[relation]
                 hierarchy = root.find(win.content)
                 if hierarchy:
