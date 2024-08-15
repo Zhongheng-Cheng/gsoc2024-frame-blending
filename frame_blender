@@ -583,6 +583,7 @@ Tab:        Switch relation
                 frame = window_group.wins[1][0].selected
                 window_group.quit_focus()
                 window_group.remove_frame_hierarchy()
+                window_group.focus_win().input.content = frame
                 window_group.focus_win().update_content(frame)
                 window_group.focus_win().confirmed = True
         
