@@ -122,6 +122,16 @@ class Input():
         self.content = self.content[:self.cursor_x] + char + self.content[self.cursor_x:]
         self.move_cursor_right()
 
+    def execute(self, key):
+        if key == curses.KEY_BACKSPACE or key == 127:
+            self.delete_char()
+        elif key == curses.KEY_LEFT:
+            self.move_cursor_left()
+        elif key == curses.KEY_RIGHT:
+            self.move_cursor_right()
+        else: # input characters
+            self.add_char(chr(key))
+
 
 class InputWindow(Window):
     def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, prompt=''):
@@ -546,14 +556,7 @@ Tab:        Switch relation
             # Text operations
             else:
                 win = window_group.focus_win()
-                if key == curses.KEY_BACKSPACE or key == 127:
-                    win.input.delete_char()
-                elif key == curses.KEY_LEFT:
-                    win.input.move_cursor_left()
-                elif key == curses.KEY_RIGHT:
-                    win.input.move_cursor_right()
-                else: # input characters
-                    win.input.add_char(chr(key))
+                win.input.execute(key)
                 win.update_content(win.input.content)
 
             if window_group.wins[1]:
@@ -633,14 +636,7 @@ Tab:        Switch relation
                     elif key == curses.KEY_RIGHT:
                         win.inc_value()
                 else:
-                    if key == curses.KEY_BACKSPACE or key == 127:
-                        win.input.delete_char()
-                    elif key == curses.KEY_LEFT:
-                        win.input.move_cursor_left()
-                    elif key == curses.KEY_RIGHT:
-                        win.input.move_cursor_right()
-                    else: # input characters
-                        win.input.add_char(chr(key))
+                    win.input.execute(key)
                     win.update_content()
 
     return
