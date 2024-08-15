@@ -7,8 +7,6 @@ import curses
 import threading
 import os, sys
 
-DEBUG_NO_GPU = True
-
 FRAME_FOLDER = "frame"
 FRAME_JSON_FOLDER = "frame_json"
 EVALUATION_CONFIG = {
@@ -447,21 +445,6 @@ class SettingsWindow(SelectWindow):
 
     def now_setting(self):
         return list(self.settings.values())[self.focus_line_index]
-
-# class FrameRelationGroup(CycleList):
-#     def __init__(self):
-#         frames = get_frames(FRAME_FOLDER)
-#         self.roots = {}
-#         self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
-#         for relation in self.relations:
-#             self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
-#             self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
-#         super().__init__(list(self.roots.keys()))
-#         return
-    
-#     def hierarchy_root(self):
-#         title = self.now()
-#         return self.roots[title]
     
 
 def main(stdscr):
@@ -524,9 +507,9 @@ Tab:        Switch relation
     for item in win_settings.settings["relations"].items:
         relation, dir = item.split(": ")
         if dir == "children":
-            hierarchy_roots[item] = analyze_hierarchy(frames, relation, encoding=encoding)
+            hierarchy_roots[item] = analyze_hierarchy(frames, relation, encoding=ENCODING)
         else:
-            hierarchy_roots[item] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
+            hierarchy_roots[item] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=ENCODING)
     
     wg.add_frame_input(win_settings.end_yx()[0], win_key.end_yx()[1])
 
@@ -587,7 +570,7 @@ Tab:        Switch relation
                             response = generate_response(query_engine, prompt, display=False)
                         else:
                             response = "Query engine is not ready!"
-                        if DEBUG_NO_GPU:
+                        if DEBUG:
                             response = prompt + '\n'.join([str(i) for i in range(40)])
                         wg.add_blending_result(
                             maxcols = maxcols,
@@ -715,8 +698,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoding', type=str, default='utf-8', help='Specify the encoding')
+    parser.add_argument('--debug', type=bool, default=False, help="Debug mode when not running on GPU")
     args = parser.parse_args()
-    encoding = args.encoding
+    ENCODING = args.encoding
+    DEBUG = args.debug
 
     curses.initscr()
     curses.start_color()
