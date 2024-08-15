@@ -149,6 +149,7 @@ class InputWindow(Window):
         self.confirmed = False
         self.input = Input()
         super().__init__(*args, content=prompt, **kwargs)
+        self.id = "input"
         return
 
     def update_cursor(self):
@@ -177,6 +178,7 @@ class SelectWindow(Window):
         self.start_char = 0
         self.selected = ''
         self.separator = ' '
+        self.id = "selection"
     
     def update_content(self, content: str = None, separator: str = ' '):
         lines = super().update_content(content)
@@ -292,7 +294,7 @@ class WindowGroup():
         return
     
     def add_frame_input(self, start_y, start_x):
-        title = f"Frame {len(self.wins[0]) + 1}"
+        title = f"Frame {len(self.wins[0])}"
         win_input = InputWindow(title, start_y, start_x, ncols=20)
         self.add(win_input)
         return
@@ -319,7 +321,7 @@ class WindowGroup():
         self.wins[2].append(eval_win)
 
     def remove_frame_input(self):
-        if len(self.wins[0]) > 1:
+        if len(self.wins[0]) > 2:
             self.wins[0][-1].win.clear()
             self.wins[0][-1].win.refresh()
             del self.wins[0][-1]
@@ -440,24 +442,26 @@ class SettingsWindow(SelectWindow):
         return '\n'.join(now_list)
     
     def update_content(self, *args, **kwargs):
-        super().update_content(self.to_text())
+        super().update_content(self.to_text(), separator=None)
         return
 
+    def now_setting(self):
+        return list(self.settings.values())[self.focus_line_index]
 
-class FrameRelationGroup(CycleList):
-    def __init__(self):
-        frames = get_frames(FRAME_FOLDER)
-        self.roots = {}
-        self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
-        for relation in self.relations:
-            self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
-            self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
-        super().__init__(list(self.roots.keys()))
-        return
+# class FrameRelationGroup(CycleList):
+#     def __init__(self):
+#         frames = get_frames(FRAME_FOLDER)
+#         self.roots = {}
+#         self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
+#         for relation in self.relations:
+#             self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
+#             self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
+#         super().__init__(list(self.roots.keys()))
+#         return
     
-    def hierarchy_root(self):
-        title = self.now()
-        return self.roots[title]
+#     def hierarchy_root(self):
+#         title = self.now()
+#         return self.roots[title]
     
 
 def main(stdscr):
@@ -511,8 +515,10 @@ Tab:        Switch relation
 /:          Blend with
             confirmed frames"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
-
-    win_hier_relation = SettingsWindow("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, nlines=3, center=True)
+    wg = WindowGroup()
+    win_hier_relation = SettingsWindow("Hierarchy Relation", 0, win_key.end_yx()[1], ncols=win_key.ncols, nlines=3, center=True)
+    wg.add(win_hier_relation, 0)
+    
     hierarchy_roots = {}
     frames = get_frames(FRAME_FOLDER)
     for item in win_hier_relation.settings["relations"].items:
@@ -521,14 +527,16 @@ Tab:        Switch relation
             hierarchy_roots[item] = analyze_hierarchy(frames, relation, encoding=encoding)
         else:
             hierarchy_roots[item] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
+    
+    wg.add_frame_input(win_hier_relation.end_yx()[0], win_key.end_yx()[1])
 
-    win_query_engine = Window("Query Engine", win_hier_relation.end_yx()[0], 0, ncols=win_key.ncols, content="Loading", center=True)
+    win_query_engine = Window("Query Engine", win_key.end_yx()[0], 0, ncols=win_key.ncols, content="Loading", center=True)
 
     loading_thread = threading.Thread(target=background_loading, args=(win_query_engine,))
     loading_thread.start()
 
-    window_group = WindowGroup()
-    window_group.add_frame_input(0, win_key.end_yx()[1])
+    
+    
     
     ds = EvaluationDataService(
         EVALUATION_CONFIG
@@ -539,7 +547,7 @@ Tab:        Switch relation
         # Refresh windows display
         win_logo.update_content()
         win_hier_relation.update_content()
-        window_group.focus_win().update_content()
+        wg.focus_win().update_content()
         
         key = stdscr.getch()
         
@@ -547,114 +555,126 @@ Tab:        Switch relation
         if key == 27: # ESC
             break
         
-        # When focus on frame input windows
-        elif window_group.focus_index[0] == 0:
-            
-            # Switch frame
-            if key == curses.KEY_DOWN:
-                window_group.next_focus()
-            elif key == curses.KEY_UP:
-                window_group.prev_focus()
+        # When focus on the first column
+        elif wg.focus_index[0] == 0:
 
             # Add/remove frame
-            elif key == ord('+'):
-                window_group.add_frame_input(len(window_group.wins[0]) * 4, win_key.end_yx()[1])
+            if key == ord('+'):
+                wg.add_frame_input(wg.wins[0][-1].end_yx()[0], win_key.end_yx()[1])
             elif key == ord('-'):
-                window_group.remove_frame_input()
-
-            # Switch Frame Hierarchy
+                wg.remove_frame_input()
+            
+            # Switch window
             elif key == ord('\t') or key == 9: # TAB
-                win_hier_relation.settings["relations"].next()
-            
-            # Enter frame Hierarchy
-            elif key == ord('\n'):
-                if window_group.focus_win().content and window_group.wins[1]:
-                    window_group.enter_focus([1, 0])
-                    continue
-            
-            # Generate frame blending example
-            elif key == ord("/"):
-                maxcols = stdscr_width - window_group.wins[0][0].end_yx()[1] - 2
-                confirmed_frames = [win.content for win in window_group.wins[0] if win.confirmed]
-                window_group.add_blending_result(
-                    maxcols = maxcols,
-                    text = "Generating frame blending example between frames: \n" + "\n".join(confirmed_frames)
-                )
-                prompt = prompts.zero_shot_blending(confirmed_frames)
-                if win_query_engine.content == "Finished":
-                    response = generate_response(query_engine, prompt, display=False)
-                else:
-                    response = "Query engine is not ready!"
-                if DEBUG_NO_GPU:
-                    response = prompt + '\n'.join([str(i) for i in range(40)])
-                window_group.add_blending_result(
-                    maxcols = maxcols,
-                    text = response
-                )
-                window_group.add_evaluation(
-                    maxcols = maxcols,
-                )
-                window_group.enter_focus([2, 0])
-                continue
+                wg.next_focus()
 
-            # Cancel frame confirmation
-            elif window_group.focus_win().confirmed == True:
-                if key == curses.KEY_BACKSPACE or key == 127:
-                    window_group.focus_win().confirmed = False
-
-            # Text operations
             else:
-                win = window_group.focus_win()
-                win.input.execute(key)
-                win.update_content(win.input.content)
+                if wg.focus_win().id == "input":
 
-            if window_group.wins[1]:
-                window_group.remove_frame_hierarchy()
-            win = window_group.focus_win()
-            if not win.confirmed:
+                    # Enter frame Hierarchy
+                    if key == ord('\n'):
+                        if wg.focus_win().content and wg.wins[1]:
+                            wg.enter_focus([1, 0])
+                            continue
+            
+                    # Generate frame blending example
+                    elif key == ord("/"):
+                        maxcols = stdscr_width - wg.wins[0][0].end_yx()[1] - 2
+                        confirmed_frames = [win.content for win in wg.wins[0] if win.id == "input" and win.confirmed]
+                        wg.add_blending_result(
+                            maxcols = maxcols,
+                            text = "Generating frame blending example between frames: \n" + "\n".join(confirmed_frames)
+                        )
+                        prompt = prompts.zero_shot_blending(confirmed_frames)
+                        if win_query_engine.content == "Finished":
+                            response = generate_response(query_engine, prompt, display=False)
+                        else:
+                            response = "Query engine is not ready!"
+                        if DEBUG_NO_GPU:
+                            response = prompt + '\n'.join([str(i) for i in range(40)])
+                        wg.add_blending_result(
+                            maxcols = maxcols,
+                            text = response
+                        )
+                        wg.add_evaluation(
+                            maxcols = maxcols,
+                        )
+                        wg.enter_focus([2, 0])
+                        continue
+                
+                    # Cancel frame confirmation
+                    elif wg.focus_win().confirmed == True:
+                        if key == curses.KEY_BACKSPACE or key == 127:
+                            wg.focus_win().confirmed = False
+
+                    # Text operations
+                    else:
+                        win = wg.focus_win()
+                        win.input.execute(key)
+                        win.update_content(win.input.content)
+                
+                elif wg.focus_win().id == "selection":
+
+                    # Switch setting
+                    if key == curses.KEY_DOWN:
+                        wg.focus_win().next()
+                    elif key == curses.KEY_UP:
+                        wg.focus_win().prev()
+                    elif key == curses.KEY_RIGHT:
+                        wg.focus_win().now_setting().next()
+                    elif key == curses.KEY_LEFT:
+                        wg.focus_win().now_setting().prev()
+                    
+
+            
+            # Update frame_hierarchy window
+            if wg.wins[1]:
+                wg.remove_frame_hierarchy()
+            win = wg.focus_win()
+            if win.id == "input" and not win.confirmed:
                 relation = win_hier_relation.settings["relations"].now()
                 root = hierarchy_roots[relation]
                 hierarchy = root.find(win.content)
                 if hierarchy:
-                    window_group.add_frame_hierarchy(relation, root)
+                    wg.add_frame_hierarchy(relation, root)
             
         
-        # When focus on hierarchy window
-        elif window_group.focus_index[0] == 1:
+        # When focus on the second column
+        elif wg.focus_index[0] == 1:
 
             # Quit frame hierarchy
             if key == ord('\\'):
-                window_group.quit_focus()
+                wg.quit_focus()
             
             # Switch frame
             elif key == curses.KEY_DOWN:
-                window_group.wins[1][0].next()
+                wg.wins[1][0].next()
             elif key == curses.KEY_UP:
-                window_group.wins[1][0].prev()
+                wg.wins[1][0].prev()
             
             # Confirm frame
             elif key == ord('\n'):
-                frame = window_group.wins[1][0].selected
-                window_group.quit_focus()
-                window_group.remove_frame_hierarchy()
-                window_group.focus_win().input.content = frame
-                window_group.focus_win().update_content(frame)
-                window_group.focus_win().confirmed = True
+                frame = wg.wins[1][0].selected
+                wg.quit_focus()
+                wg.remove_frame_hierarchy()
+                wg.focus_win().input.content = frame
+                wg.focus_win().update_content(frame)
+                wg.focus_win().confirmed = True
         
-        # When focus on blending result window column
-        elif window_group.focus_index[0] == 2:
-            win = window_group.focus_win()
+        # When focus on the third column
+        elif wg.focus_index[0] == 2:
+            win = wg.focus_win()
 
             if key == ord('\t') or key == 9: # TAB
-                window_group.next_focus()
+                wg.next_focus()
             
             # Quit frame hierarchy
             elif key == ord('\\'):
-                window_group.quit_focus()
-                window_group.remove_blending_result()
+                wg.quit_focus()
+                wg.remove_blending_result()
             
             # When focus on result window
-            elif window_group.focus_index[1] == 0:
+            elif wg.focus_index[1] == 0:
 
                 # Scroll content
                 if key == curses.KEY_DOWN:
@@ -663,18 +683,18 @@ Tab:        Switch relation
                     win.scroll_up()
             
             # When focus on evaluation window
-            elif window_group.focus_index[1] == 1:
+            elif wg.focus_index[1] == 1:
 
                 # Confirm frame
                 if key == ord('\n'):
                     win.submit_evaluation(
                         data_service = ds,
-                        frames = [win.content for win in window_group.wins[0] if win.confirmed], 
+                        frames = [win.content for win in wg.wins[0] if win.confirmed], 
                         settings = "zero-shot", 
-                        blending_result = window_group.wins[2][0].content
+                        blending_result = wg.wins[2][0].content
                     )
-                    window_group.quit_focus()
-                    window_group.remove_blending_result()
+                    wg.quit_focus()
+                    wg.remove_blending_result()
 
                 # Scroll content
                 elif key == curses.KEY_DOWN:
