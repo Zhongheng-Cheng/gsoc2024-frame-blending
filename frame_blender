@@ -294,13 +294,13 @@ class WindowGroup():
     
     def add_frame_input(self, start_y, start_x):
         title = f"Frame {len(self.wins[0])}"
-        win_input = InputWindow(title, start_y, start_x, ncols=20)
+        win_input = InputWindow(title, start_y, start_x, ncols=28)
         self.add(win_input)
         return
     
-    def add_frame_hierarchy(self, relation, root):
+    def add_frame_hierarchy(self, relation, hierarchy):
         title = relation
-        content = str(root.find(self.focus_win().content)).strip()
+        content = str(hierarchy).strip()
         win = SelectWindow(title, 0, self.wins[0][0].end_yx()[1], nlines=min(stdscr_height-2, len(content.split('\n'))), content=content)
         self.wins[1].append(win)
         return
@@ -328,8 +328,6 @@ class WindowGroup():
     
     def remove_frame_hierarchy(self):
         win = self.wins[1][0]
-        win.start_line = 0
-        win.focus_line_index = 0
         win.win.clear()
         win.win.refresh()
         del self.wins[1][0]
@@ -380,9 +378,12 @@ class WindowGroup():
         """
         Return the current focused window.
         """
-        col, i = self.focus_index
-        win = self.wins[col][i]
+        win = self.get_win(self.focus_index)
         return win
+    
+    def get_win(self, index: list):
+        col, i = index
+        return self.wins[col][i]
     
 
 class CycleList():
@@ -408,9 +409,7 @@ class CycleList():
 
 
 class SettingsWindow(SelectWindow):
-
     def __init__(self, *args, **kwargs):
-        
         self.settings = {
             "relations": CycleList([
                 "Inheritance: children", 
@@ -436,7 +435,7 @@ class SettingsWindow(SelectWindow):
         super().__init__(*args, **kwargs)
         return
     
-    def to_text(self):
+    def to_text(self) -> str:
         now_list = [item.now() for item in self.settings.values()]
         return '\n'.join(now_list)
     
@@ -444,7 +443,7 @@ class SettingsWindow(SelectWindow):
         super().update_content(self.to_text(), separator=None)
         return
 
-    def now_setting(self):
+    def now_setting(self) -> CycleList:
         return list(self.settings.values())[self.focus_line_index]
     
 
@@ -500,7 +499,7 @@ Tab:        Switch relation
             confirmed frames"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
     wg = WindowGroup()
-    win_settings = SettingsWindow("Settings", 0, win_key.end_yx()[1], ncols=win_key.ncols, nlines=3, center=True)
+    win_settings = SettingsWindow("Settings", 0, win_key.end_yx()[1], ncols=28, nlines=3, center=True)
     wg.add(win_settings, 0)
     
     hierarchy_roots = {}
@@ -617,7 +616,7 @@ Tab:        Switch relation
                 root = hierarchy_roots[relation]
                 hierarchy = root.find(win.content)
                 if hierarchy:
-                    wg.add_frame_hierarchy(relation, root)
+                    wg.add_frame_hierarchy(relation, hierarchy)
             
         
         # When focus on the second column
@@ -633,6 +632,12 @@ Tab:        Switch relation
             elif key == curses.KEY_UP:
                 wg.wins[1][0].prev()
             
+            # Switch frame relation
+            elif key == curses.KEY_RIGHT:
+                win_settings.now_setting().next()
+            elif key == curses.KEY_LEFT:
+                win_settings.now_setting().prev()
+            
             # Confirm frame
             elif key == ord('\n'):
                 frame = wg.wins[1][0].selected
@@ -641,6 +646,16 @@ Tab:        Switch relation
                 wg.focus_win().input.content = frame
                 wg.focus_win().update_content(frame)
                 wg.focus_win().confirmed = True
+                continue
+
+            # Update frame_hierarchy window
+            if wg.wins[1][0].title != win_settings.settings["relations"].now():
+                wg.remove_frame_hierarchy()
+                relation = win_settings.settings["relations"].now()
+                root = hierarchy_roots[relation]
+                hierarchy = root.find(wg.get_win(wg._tmp_focus_index).content)
+                wg.add_frame_hierarchy(relation, hierarchy)
+                wg.wins[1][0].update_focus(True)
         
         # When focus on the third column
         elif wg.focus_index[0] == 2:
