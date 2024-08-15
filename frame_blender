@@ -7,6 +7,13 @@ import curses
 import threading
 import os, sys
 
+FRAME_FOLDER = "frame"
+FRAME_JSON_FOLDER = "frame_json"
+EVALUATION_CONFIG = {
+    "data_directory": "data",
+    "data_file": "evaluation.json"
+}
+
 class Window():
     def __init__(
             self, 
@@ -98,7 +105,7 @@ class Window():
                 start_col = 1
             self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
         self.win.refresh()
-        return
+        return lines
     
 
 class Input():
@@ -160,29 +167,22 @@ class InputWindow(Window):
     
 
 class SelectWindow(Window):
-    def __init__(self, title, begin_y, begin_x, nlines=0, ncols=0, content=''):
-        self.focus_line_index = 0
-        self.start_index = 0
-        self.selected = ''
-        super().__init__(title, begin_y, begin_x, nlines, ncols, content)
-        return
+
+    focus_line_index = 0
+    start_char = 0
+    selected = ''
+    separator = ' '
     
-    def update_content(self, content: str = ""):
-        if not content:
-            content = self.content
-        else:
-            self.content = content
-        self.win.clear()
-        self.win.border()
-        self.update_focus(self.focus)
-        lines = content.split('\n')
-        for i in range(min(self.nlines, len(lines) - self.start_line)):
-            self.win.addstr(i + 1, 1, lines[i + self.start_line][:self.ncols])
-        if self.focus == True:
-            focus_line = lines[self.focus_line_index]
-            self.start_index = focus_line.rfind(' ') + 1
-            self.selected = focus_line[self.start_index:]
-            self.win.addstr(self.focus_line_index - self.start_line + 1, self.start_index + 1, focus_line[self.start_index:], curses.color_pair(2))
+    def update_content(self, content: str = None, separator: str = ' '):
+        lines = super().update_content(content)
+        if self.focus:
+            focus_line = lines[self.focus_line_index - self.start_line]
+            if separator:
+                self.start_char = focus_line.rfind(separator) + len(separator)
+            else:
+                self.start_char = 0
+            self.selected = focus_line[self.start_char:]
+            self.win.addstr(self.focus_line_index - self.start_line + 1, self.start_char + 1, focus_line[self.start_char:], curses.color_pair(2))
         self.win.refresh()
         return
     
@@ -244,7 +244,7 @@ class EvaluationWindow(SelectWindow):
     
     def update_value(self, value):
         self.lines[self.focus_line_index] = self.lines[self.focus_line_index][:self.start_index] + str(value)
-        self.update_content('\n'.join(self.lines))
+        self.update_content('\n'.join(self.lines) + self.input.content)
         return
     
     def export_evaluation_matrix(self):
@@ -378,8 +378,8 @@ class WindowGroup():
         return win
     
 
-class GroupCycle():
-    def __init__(self, items):
+class CycleList():
+    def __init__(self, items: list):
         self.items = items
         self.index = 0
         return
@@ -400,8 +400,22 @@ class GroupCycle():
         return
 
 
-class FrameRelationGroup(GroupCycle):
-    def __init__(self, frames):
+# class SettingsWindow(SelectWindow):
+#     def __init__(self):
+#         frames = get_frames(FRAME_FOLDER)
+#         frame_relation_control = FrameRelationGroup(frames)
+
+#     def get_relation_list(self, frames):
+#         self.roots = {}
+#         self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
+#         for relation in self.relations:
+#             self.roots[relation + ": children"] = analyze_hierarchy(frames, relation, encoding=encoding)
+#             self.roots[relation + ': parents'] = analyze_hierarchy(frames, relation, reverse_order=True, encoding=encoding)
+
+
+class FrameRelationGroup(CycleList):
+    def __init__(self):
+        frames = get_frames(FRAME_FOLDER)
         self.roots = {}
         self.relations = ["Inheritance", "Perspective", "Usage", "Subframe"]
         for relation in self.relations:
@@ -435,9 +449,7 @@ def main(stdscr):
             window.update_content(text, curses.color_pair(4))
 
 
-    foldername = "frame"
-    frames = get_frames(foldername)
-    frame_relation_control = FrameRelationGroup(frames)
+    frame_relation_control = FrameRelationGroup()
     stdscr.clear()
     stdscr.refresh()
 
@@ -469,7 +481,7 @@ Tab:        Switch relation
             confirmed frames"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
 
-    win_hier_relation = Window("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, center=True)
+    win_hier_relation = SelectWindow("Hierarchy Relation", win_key.end_yx()[0], 0, ncols=win_key.ncols, center=True)
 
     win_query_engine = Window("Query Engine", win_hier_relation.end_yx()[0], 0, ncols=win_key.ncols, content="Loading", center=True)
 
@@ -480,10 +492,7 @@ Tab:        Switch relation
     window_group.add_frame_input(0, win_key.end_yx()[1])
     
     ds = EvaluationDataService(
-        config = {
-            "data_directory": "data",
-            "data_file": "evaluation.json"
-        }
+        EVALUATION_CONFIG
     )
 
     while True:
