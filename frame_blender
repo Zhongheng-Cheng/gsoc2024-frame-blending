@@ -7,6 +7,8 @@ import curses
 import threading
 import os, sys
 
+DEBUG_NO_GPU = True
+
 FRAME_FOLDER = "frame"
 FRAME_JSON_FOLDER = "frame_json"
 EVALUATION_CONFIG = {
@@ -583,7 +585,8 @@ Tab:        Switch relation
                     response = generate_response(query_engine, prompt, display=False)
                 else:
                     response = "Query engine is not ready!"
-                response = prompt + '\n'.join([str(i) for i in range(40)]) # TODO: delete
+                if DEBUG_NO_GPU:
+                    response = prompt + '\n'.join([str(i) for i in range(40)])
                 window_group.add_blending_result(
                     maxcols = maxcols,
                     text = response
