@@ -8,30 +8,7 @@ if not os.path.exists(dir_name):
 if not os.path.exists(file_path):
     with open(file_path, 'w') as file:
         file.write('[]')
-
-class EvaluationMatrix():
-    def __init__(self,
-                 completeness: int = 0,
-                 clarity: int = 0,
-                 relevance: int = 0,
-                 depth_of_understanding: int = 0,
-                 coherence: int = 0,
-                 execute_time:int = 0,
-                 additional_notes: str = None,
-                 ):
-        self.matrix = {
-            "completeness": completeness,
-            "clarity": clarity,
-            "relevance": relevance,
-            "depth_of_understanding": depth_of_understanding,
-            "coherence": coherence,
-            "execute_time": execute_time,
-            "additional_notes": additional_notes,
-        }
-    
-    def to_dict(self):
-        return self.matrix
-
+        
 
 class EvaluationDataService():
 

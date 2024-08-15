@@ -1,5 +1,5 @@
 import json
-from evaluation_data_service import EvaluationMatrix, EvaluationDataService
+from evaluation_data_service import EvaluationDataService
 
 def show_change(func):
     def wrapper(*args, **kwargs):
@@ -28,7 +28,7 @@ def get_data_service():
 
 def test_get_result():
     ds = get_data_service()
-    result = ds.get_result(id=3)
+    result = ds.get_result(id=0)
     print(result)
     return
 
@@ -41,34 +41,43 @@ def test_create_result():
         frames = ["Travel", "Aging"],
         settings = ["zero-shot", "rhetorical"],
         blending_result = "test result",
-        evaluations = EvaluationMatrix(
-            completeness = 4,
-            clarity = 4,
-            relevance = 4,
-            depth_of_understanding = 4,
-            coherence = 4,
-            execute_time = 4,
-            additional_notes = "It is good, too"
-        )
+        evaluations = {
+            "completeness": 4,
+            "clarity": 4,
+            "relevance": 4,
+            "depth_of_understanding": 4,
+            "coherence": 4,
+            "execute_time": 4,
+            "additional_notes": "It is good, too"
+        }
     )
 
 @show_change
 def test_update():
     ds = get_data_service()
     ds.insert_evaluation(
-        EvaluationMatrix(3, 3, 3, 3, 3, 3, "Just Average"),
-        id=3
+        evaluation = {
+            "completeness": 6,
+            "clarity": 6,
+            "relevance": 6,
+            "depth_of_understanding": 6,
+            "coherence": 6,
+            "execute_time": 6,
+            "additional_notes": "It is bad"
+        },
+        id = 0
     )
 
 @show_change
 def test_delete():
     ds = get_data_service()
     ds.delete_result(
-        id=2
+        id = 0
     )
 
 if __name__ == "__main__":
-    # test_get_result()
-    # test_create_result()
+    
+    test_create_result()
     # test_update()
-    test_delete()
+    # test_get_result()
+    # test_delete()
