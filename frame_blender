@@ -565,7 +565,7 @@ Tab:        Switch relation
                             maxcols = maxcols,
                             text = "Generating frame blending example between frames: \n" + "\n".join(confirmed_frames)
                         )
-                        prompt = prompts.zero_shot_blending(confirmed_frames)
+                        prompt = prompts[win_settings.settings["prompting"].now()](confirmed_frames, win_settings.settings["rhetorical"].now())
                         if win_query_engine.content == "Finished":
                             response = generate_response(query_engine, prompt, display=False)
                         else:
