@@ -89,7 +89,7 @@ class Window():
         self.update_content()
         return
     
-    def update_content(self, content: str = None, attr=0):
+    def update_content(self, content: str = None, attr: int = 0):
         if content is None:
             content = self.content
         else:
@@ -98,14 +98,16 @@ class Window():
         self.win.border()
         self.update_focus(self.focus)
         lines = content.replace('\t', '    ').split('\n')[self.start_line : self.start_line + self.nlines]
+        start_cols = []
         for i, line in enumerate(lines):
             if self.center:
                 start_col = (self.ncols - min(len(line), self.ncols)) // 2 + 1
             else:
                 start_col = 1
             self.win.addstr(i + 1, start_col, line[:self.ncols], attr)
+            start_cols.append(start_col - 1)
         self.win.refresh()
-        return lines
+        return lines, start_cols
     
 
 class Input():
@@ -142,7 +144,6 @@ class Input():
 
 class InputWindow(Window):
     def __init__(self, *args, prompt='', **kwargs):
-        
         self.prompt = prompt
         self.confirmed = False
         self.input = Input()
@@ -169,7 +170,6 @@ class InputWindow(Window):
     
 
 class SelectWindow(Window):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.focus_line_index = 0
@@ -179,16 +179,17 @@ class SelectWindow(Window):
         self.id = "selection"
     
     def update_content(self, content: str = None, separator: str = ' '):
-        lines = super().update_content(content)
+        lines, start_cols = super().update_content(content)
         if self.focus:
-            focus_line = lines[self.focus_line_index - self.start_line]
+            tmp_index = self.focus_line_index - self.start_line
+            focus_line = lines[tmp_index]
             if separator:
                 self.start_char = focus_line.rfind(separator) + len(separator)
             else:
                 self.start_char = 0
             self.selected = focus_line[self.start_char:]
-            self.win.addstr(self.focus_line_index - self.start_line + 1, self.start_char + 1, focus_line[self.start_char:], curses.color_pair(2))
-        self.win.refresh()
+            self.win.addstr(self.focus_line_index - self.start_line + 1, start_cols[tmp_index] + self.start_char + 1, focus_line[self.start_char:], curses.color_pair(2))
+            self.win.refresh()
         return
     
     def next(self):
