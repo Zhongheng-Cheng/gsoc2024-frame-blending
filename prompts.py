@@ -1,5 +1,12 @@
 class Prompts:
 
+    def __getitem__(self, key):
+        key = key.replace(' ', '_').replace('-', '_')
+        method = getattr(self, key)
+        if callable(method):
+            return method
+        raise KeyError(f"Method {key} not found or is not callable")
+
     one_shot_example = '''Here is an example of frame blending analysis, you should follow this analyzing process while generating, but not use this example:
 # Expression
 "Time is money."
@@ -24,17 +31,20 @@ For example, "wasting time" implies a loss similar to wasting money, highlightin
 
     rhetorical = """Prefer to use rhetorical devices such as Analogy and Metaphor."""
 
-    def zero_shot_blending(self, frames = [], rhetorical: bool = True):
+    def zero_shot(self, frames = [], rhetorical: bool = True):
         frame_names = ', '.join(f'"{frame}"' for frame in frames)
         prompt = f"""Create a frame blending example sentence between frames: {frame_names}. """
         if rhetorical:
             prompt += '\n' + self.rhetorical
         return prompt
 
-    def one_shot_blending(self, frames = [], rhetorical: bool = True):
-        return self.zero_shot_blending(frames, rhetorical) + '\n' + self.one_shot_example
+    def one_shot(self, frames = [], rhetorical: bool = True):
+        return self.zero_shot(frames, rhetorical) + '\n' + self.one_shot_example
+    
+    def few_shot(self, frames = [], rhetorical: bool = True):
+        return self.one_shot() # TODO: temporary
 
-    def cot_blending(self, frames = [], rhetorical: bool = True):
+    def chain_of_thought(self, frames = [], rhetorical: bool = True):
         n = len(frames)
         prompt_define_prompts = '\n'.join([f"{i + 1}. Define the '{frame}' frame." for i, frame in enumerate(frames)])
         prompt = f"""Let's break down the task into smaller, logical steps to ensure clarity and thoroughness.
