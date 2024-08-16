@@ -638,9 +638,9 @@ Tab:        Switch relation
             
             # Switch frame relation
             elif key == curses.KEY_RIGHT:
-                win_settings.now_setting().next()
+                win_settings.settings["relations"].next()
             elif key == curses.KEY_LEFT:
-                win_settings.now_setting().prev()
+                win_settings.settings["relations"].prev()
             
             # Confirm frame
             elif key == ord('\n'):
