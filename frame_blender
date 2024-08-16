@@ -256,7 +256,9 @@ class EvaluationWindow(SelectWindow):
     
     def export_evaluation_matrix(self):
         eval_pairs = [line.split(": ") for line in self.lines]
-        eval_pairs = [[i, int(j)] for i, j in eval_pairs[:-1]]
+        for i in range(len(eval_pairs) - 1):
+            eval_pairs[i][1] = int(eval_pairs[i][1])
+        # eval_pairs = [[i, int(j)] for i, j in eval_pairs[:-1]].append(eval_pairs[-1])
         eval_pairs[-1][-1] = self.input.content
         matrix = {item: value for item, value in eval_pairs}
         return matrix
