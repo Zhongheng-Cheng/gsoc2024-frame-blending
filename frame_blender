@@ -579,9 +579,10 @@ Tab:        Switch relation
                             maxcols = maxcols,
                             text = response
                         )
-                        wg.add_evaluation(
-                            maxcols = maxcols,
-                        )
+                        if win_query_engine.content == "Finished" or DEBUG:
+                            wg.add_evaluation(
+                                maxcols = maxcols,
+                            )
                         wg.enter_focus([2, 0])
                         continue
                 
