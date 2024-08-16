@@ -446,6 +446,10 @@ class SettingsWindow(SelectWindow):
     def now_setting(self) -> CycleList:
         return list(self.settings.values())[self.focus_line_index]
     
+    def export(self) -> list:
+        res = [self.settings["prompting"].now(), self.settings["rhetorical"].now()]
+        return res
+    
 
 def main(stdscr):
     global stdscr_height, stdscr_width
@@ -467,7 +471,6 @@ def main(stdscr):
             window.update_content(text, curses.color_pair(4))
 
 
-    # frame_relation_control = FrameRelationGroup()
     stdscr.clear()
     stdscr.refresh()
 
@@ -685,8 +688,8 @@ Tab:        Switch relation
                 if key == ord('\n'):
                     win.submit_evaluation(
                         data_service = ds,
-                        frames = [win.content for win in wg.wins[0] if win.confirmed], 
-                        settings = "zero-shot", 
+                        frames = [win.content for win in wg.wins[0] if win.id == "input" and win.confirmed], 
+                        settings = win_settings.export(), 
                         blending_result = wg.wins[2][0].content
                     )
                     wg.quit_focus()
