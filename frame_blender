@@ -491,17 +491,16 @@ def main(stdscr):
     start_x = stdscr_width - max(len(line) for line in logo_lines) - 2
     win_logo = Window("", start_y, start_x, content=win_logo_content)
 
-    win_key_content = """\
+    win_key_content = """
 ESC:        Quit
-+:          Add Frame
--:          Remove Frame
++/-:        Add/Remove frame
+Tab:        Switch window
 Arrow
- up/down:   Switch frame
-Enter:      Confirm frame
-          & Enter hierarchy
-Tab:        Switch relation
-/:          Blend with
-            confirmed frames"""
+ up/down/   Change settings
+ left/right:
+Enter:      Enter Hierarchy
+          & Confirm frame
+/:          Start blending"""
     win_key = Window("Keys", 0, 0, content=win_key_content)
     wg = WindowGroup()
     win_settings = SettingsWindow("Settings", 0, win_key.end_yx()[1], ncols=28, nlines=3, center=True)
