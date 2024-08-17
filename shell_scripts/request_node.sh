@@ -4,7 +4,6 @@ source ./config.sh
 
 cd $TMP_WORK_DIR/$PROG_DIR
 source venv/bin/activate
-pip install -r requirements.txt
 
 if [ "$NODE" == "gpu" ]; then
     srun -p gpu \
