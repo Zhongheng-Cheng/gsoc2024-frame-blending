@@ -50,15 +50,15 @@ This is a terminal application built for CWRU HPC for generating frame blending 
 
 ### Prerequisites
 
-1. Basic installation mentioned in [Installation](#installation)
-2. Setup FrameNet dataset
+1. Basic installation mentioned in [Installation](#installation).
+2. Setup FrameNet dataset.
     - Copy the FrameNet dataset folder `frame/` to the work directory.
     - Create JSON-format FrameNet dataset folder `frame_json/` using [FrameNet XML Parser](#framenet-xml-parser).
     
     ```bash
     python framenet_xml_parser.py
     ```
-3. Request a GPU node on CWRU HPC
+3. Request an interactive job on the GPU node of CWRU HPC.
 
 ### Usage
 
