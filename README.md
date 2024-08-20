@@ -65,9 +65,38 @@ This is a terminal application built for CWRU HPC for generating frame blending 
 The program can be run using the `./frame_blender` command and accepts the following flags:
 
 - `--encoding`: Used to specify the encoding method。 Acceptable values include `utf-8` and `ascii`, with `utf-8` as the default.
-- `--debug`: Used to enable debug mode. Acceptable values are `True` or `False`, with `False` as the default.
+- `--debug`: Used to enable debug mode, which directly outputs the prompt instead of the generation result from LLM. Acceptable values are `True` or `False`, with `False` as the default.
 
 > **_Note:_** If the box-drawing characters do not display well on HPC terminal, please set `--encoding=ascii` when running Frame Blender.
+
+#### Key Bindings
+
+When in Frame Blender interface:
+
+- `Esc`: Quit
+- `Tab`: Move to next window
+- `+`/`-`: Add/Remove input window
+- In **Settings window**:
+    - `Arrow keys`: Switch settings and change setting
+- In **Input window**:
+    - Enter characters in Input windows and get search result automatically in Hierarchy window when available
+    - `Enter`: Enter Hierarchy window
+    - `Backspace`: Cancel confirmed frame
+- In **Hierarchy window**:
+    - `Backspace`: Quit Hierarchy window
+    - `Arrow keys`: Switch different frames/frame relations
+    - `Enter`: Confirm word
+- When needed frames are all confirmed:
+    - `/`: Start generating result
+    - `Tab`: Switch to Evaluation window
+    - `Arrow keys`/`Text input`: Enter evaluation
+    - `Enter`: Submit evaluation form (stored to `/data/evaluation.json`)
+
+#### Demonstration Video
+
+Please check out this link for a demonstration video:
+
+<https://zhongheng-cheng.github.io/2024/08/16/Week-12.html#guidance-to-run-frame-blender-on-cwru-hpc>
 
 ## Frame Hierarchy Analyzer
 
