@@ -62,12 +62,12 @@ This is a terminal application built for CWRU HPC for generating frame blending 
 
 ### Usage
 
-```bash
-./frame_blender # run the frame_blender
+The program can be run using the `./frame_blender` command and accepts the following flags:
 
-# If the box-drawing characters do not display well on HPC terminal
-./frame_blender --encoding=ascii # replace the box-drawing characters with ASCII characters
-```
+- `--encoding`: Used to specify the encoding method。 Acceptable values include `utf-8` and `ascii`, with `utf-8` as the default.
+- `--debug`: Used to enable debug mode. Acceptable values are `True` or `False`, with `False` as the default.
+
+> **_Note:_** If the box-drawing characters do not display well on HPC terminal, please set `--encoding=ascii` when running Frame Blender.
 
 ## Frame Hierarchy Analyzer
 
