@@ -529,7 +529,8 @@ Enter:      Enter Hierarchy
     while True:
 
         # Refresh windows display
-        win_logo.update_content()
+        if len(wg.wins) < 3 or not wg.wins[2]:
+            win_logo.update_content()
         win_settings.update_content()
         wg.focus_win().update_content()
         
