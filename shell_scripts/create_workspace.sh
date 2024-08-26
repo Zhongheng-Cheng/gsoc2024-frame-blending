@@ -12,6 +12,7 @@ fi
 rsync -av --progress $GALLINA_HOME_DIR/$PROG_DIR/data $TMP_WORK_DIR/$PROG_DIR/
 
 cd $TMP_WORK_DIR/$PROG_DIR
+git pull origin main
 source venv/bin/activate
 pip install -r requirements.txt
 deactivate
