@@ -83,11 +83,13 @@ When in Frame Blender interface:
     - `Enter`: Enter Hierarchy window
     - `Backspace`: Cancel confirmed frame
 - In **Hierarchy window**:
-    - `Backspace`: Quit Hierarchy window
+    - `\`: Quit Hierarchy window
     - `Arrow keys`: Switch different frames/frame relations
     - `Enter`: Confirm word
 - When needed frames are all confirmed:
     - `/`: Start generating result
+- In **Result Window** / **Evaluation Window**:
+    - `\`: Quit Result/Evaluation window
     - `Tab`: Switch to Evaluation window
     - `Arrow keys`/`Text input`: Enter evaluation
     - `Enter`: Submit evaluation form (stored to `/data/evaluation.json`)
