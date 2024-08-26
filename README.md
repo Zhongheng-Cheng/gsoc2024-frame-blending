@@ -14,6 +14,7 @@ My personal progress blog can be found [here](https://zhongheng-cheng.github.io/
 - [FrameNet XML Parser](#framenet-xml-parser)
 - [RAG for Llama2 (Huggingface)](#rag-for-llama2-huggingface)
 - [Llama2 (Meta)](#llama2-meta)
+- [Future Work](#future-work)
 
 ## Installation
 
@@ -83,11 +84,13 @@ When in Frame Blender interface:
     - `Enter`: Enter Hierarchy window
     - `Backspace`: Cancel confirmed frame
 - In **Hierarchy window**:
-    - `Backspace`: Quit Hierarchy window
+    - `\`: Quit Hierarchy window
     - `Arrow keys`: Switch different frames/frame relations
     - `Enter`: Confirm word
 - When needed frames are all confirmed:
     - `/`: Start generating result
+- In **Result Window** / **Evaluation Window**:
+    - `\`: Quit Result/Evaluation window
     - `Tab`: Switch to Evaluation window
     - `Arrow keys`/`Text input`: Enter evaluation
     - `Enter`: Submit evaluation form (stored to `/data/evaluation.json`)
@@ -203,3 +206,10 @@ pip install protobuf && python $TRANSFORM --input_dir ./llama-2-7b-chat --model_
 ```bash
 python main.py
 ```
+
+## Future Work
+
+Enhance the generation performance, letting the LLM really "blends" the frames rather than "mixes/uses" the frames.
+
+- Improve the model. Newer and more powerful models (e.g. Llama 3) and more parameters(e.g. Llama2-13b, llama2-70b).
+- Training. With the frame blender workflow and evaluation data might be collected in the future, feed these generation result along with their evaluation data back into the model to train the LLM to understand how to construct better frame blending examples.
