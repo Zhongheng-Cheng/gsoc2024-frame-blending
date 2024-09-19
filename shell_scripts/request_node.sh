@@ -1,6 +1,14 @@
 #!/bin/bash
 
+NODE=""
+
 source ./config.sh
+
+# Check `--node` flag existence
+if [ -z "$NODE" ]; then
+  echo "Required flag: --node=<node_type> (e.g. cpu)"
+  exit 1
+fi
 
 cd $TMP_WORK_DIR/$PROG_DIR
 source venv/bin/activate
