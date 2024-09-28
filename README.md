@@ -63,12 +63,43 @@ This is a terminal application built for CWRU HPC for generating frame blending 
 
 ### Usage
 
-The program can be run using the `./frame_blender` command and accepts the following flags:
+When you are initializing your temp workspace for the first time or when you find any error related to the temp workspace, run this command.
 
-- `--encoding`: Used to specify the encoding method。 Acceptable values include `utf-8` and `ascii`, with `utf-8` as the default.
-- `--debug`: Used to enable debug mode, which directly outputs the prompt instead of the generation result from LLM. Acceptable values are `True` or `False`, with `False` as the default.
+This script will create a workspace in `/scratch/users/<caseID>`. Note that this directory is not permanent, you'd better store any file you want to keep in your gallina home.
 
-> **_Note:_** If the box-drawing characters do not display well on HPC terminal, please set `--encoding=ascii` when running Frame Blender.
+```bash
+./reset_workspace.sh --user=<caseID>
+```
+
+Use this script to request a cpu/gpu node. 
+
+You'll need to use only this script to start the working environment when workspace is setup, so without going through the setup all over again.
+
+```bash
+./request_node.sh --user=<caseID> --node=cpu
+```
+
+Use this command to start Frame Blender
+
+When on a GPU node, ignore the debug flag to activate the llm to respond
+
+```bash
+./frame_blender --encoding=ascii --debug=True   # (on a CPU node)
+./frame_blender --encoding=ascii                # (on a GPU node)
+```
+
+Use `Esc` key to exit the Frame Blender
+
+Use `exit` command to exit cpu/gpu node
+```bash
+exit
+```
+
+Use this script to update the `data/` folder to zxc808’s gallina home
+
+```bash
+./update_gallina_home.sh --user=<caseID>
+```
 
 #### Key Bindings
 
